@@ -7,3 +7,9 @@ class PacketKeyEnum(Enum) :
 
 	#packet content
 	PACKET = 'p'
+
+	#packet separator
+	PACKET_SEPARATOR = ';'
+
+	#multiple data separator
+	DATA_SEPARATOR = ','

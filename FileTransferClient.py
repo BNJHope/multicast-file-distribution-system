@@ -46,4 +46,5 @@ class FileTransferClient(FileTransferAbstract) :
 
     #assembles a packet to request for a file
     def assembleRequestForFilePacket(filename) :
+
         
