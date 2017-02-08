@@ -21,7 +21,7 @@ class FileTransferClient(FileTransferAbstract):
 
         # Set up a UDP socket - flags specifies IPv4,
         # datagram socket.
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:

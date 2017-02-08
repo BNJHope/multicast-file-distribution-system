@@ -40,8 +40,8 @@ class FileTransferServer(FileTransferAbstract):
         print("Sending data")
         
         # send the numbers 0-99 to any listeners
-        for x in range(0, 100):
-            sock.sendto(str.encode(str(x)), (self.MCAST_ADDRESS, self.MCAST_PORT))
+        while True:
+            sock.sendto(str.encode("ping from file transfer server"), (self.MCAST_ADDRESS, self.MCAST_PORT))
 
     # setup a listening socket
     def setUpListenSocket(self):
