@@ -1,8 +1,8 @@
 from FileTransferServer import FileTransferServer
 
-def runServer():
+def run_server():
     print("Starting server...")
     server = FileTransferServer()
-    server.sendFile()
+    server.send_file()
 
-runServer()
+run_server()

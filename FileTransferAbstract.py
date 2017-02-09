@@ -11,7 +11,7 @@ class FileTransferAbstract :
     MCAST_PORT = 0
     
 	#initialises the 
-    def setUpConfigFileValues(self) :
+    def set_up_config_file_values(self) :
 
 		#open the config file to read the details in from it
         configFile = open(self.FILE_TRANSMISSION_CONFIG_FILENAME, 'r')

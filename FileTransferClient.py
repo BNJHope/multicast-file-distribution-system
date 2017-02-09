@@ -9,15 +9,15 @@ class FileTransferClient(FileTransferAbstract):
     def __init__(self):
 
         # read in values from the config file for MCAST_ADDRESS and MCAST_PORT
-        self.setUpConfigFileValues()
+        self.set_up_config_file_values()
 
     # ask all available servers if they possess the file
-    def requestForFile(self, filename):
+    def request_for_file(self, filename):
 
-        self.assembleRequestForFilePacket(filename)
+        self.assemble_file_request_packet(filename)
 
     # Listens on the port and multicast address for data
-    def receiveData(self):
+    def receive_data(self):
 
         # Set up a UDP socket - flags specifies IPv4,
         # datagram socket.
@@ -52,6 +52,9 @@ class FileTransferClient(FileTransferAbstract):
             print(data)
 
     # assembles a packet to request for a file
-    def assembleRequestForFilePacket(filename):
+    def assemble_file_request_packet(filename):
 
-        print("assemble packet")
+        # string for the packet to be sent
+        packet = ""
+
+        

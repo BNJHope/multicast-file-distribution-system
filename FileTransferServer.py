@@ -12,20 +12,20 @@ class FileTransferServer(FileTransferAbstract):
     def __init__(self):
 
         # read in values from the config file for MCAST_ADDRESS and MCAST_PORT
-        self.setUpConfigFileValues()
+        self.set_up_config_file_values()
 
     # initialise the server and loop
-    def runServer(self):
+    def run_server(self):
 
         # set up the server multicast socket to listen for requests
-        self.setUpListenSocket()
+        self.set_up_listen_socket()
 
     # runs a listener for requests
-    def serverLoop(self):
+    def server_loop(self):
         print("loop")
 
     # broadcast a file over the MCAST port and address to any listeners
-    def sendFile(self):
+    def send_file(self):
 
         # define the socket as a IPv4 datagram socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -44,7 +44,7 @@ class FileTransferServer(FileTransferAbstract):
             sock.sendto(str.encode("ping from file transfer server"), (self.MCAST_ADDRESS, self.MCAST_PORT))
 
     # setup a listening socket
-    def setUpListenSocket(self):
+    def set_up_listen_socket(self):
 
         # Set up a UDP socket - flags specifies IPv4,
         # datagram socket and UDP protocol in use.
