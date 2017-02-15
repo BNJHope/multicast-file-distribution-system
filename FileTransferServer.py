@@ -2,7 +2,6 @@ import socket
 
 from FileTransferAbstract import FileTransferAbstract
 
-
 class FileTransferServer(FileTransferAbstract):
 
     # socket for listening to requests
