@@ -1,10 +1,19 @@
 class PacketKeyEnum :
 
 	#packet type code
-	PACKET_TYPE = 't'
+	PACKET_TYPE = 'type'
 
 	#packet content
-	PACKET = 'p'
+	PACKET = 'pack'
+
+	# key used in packets to denote a file name
+	FILE_NAME_PACKET_KEY = "flnm"
+
+	# protocol statement
+	PROTCOL_KEY = "prot"
+
+	# name of protocol
+	PROTCOL_NAME = "BHP"
 
 	# separates general values in packet
 	VALUE_SEPARATOR = ';'
@@ -20,6 +29,3 @@ class PacketKeyEnum :
 
 	#denotes the closing of the packet data
 	PACKET_CLOSE = "}"
-
-	#key used in packets to denote a file name
-	FILE_NAME_PACKET_KEY = "fn"

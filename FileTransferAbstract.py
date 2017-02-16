@@ -1,4 +1,6 @@
-class FileTransferAbstract :
+import asyncio
+
+class FileTransferAbstract(asyncio.Protocol) :
 
     #name of the file that has contains all of the configuration
     #information for the transmission

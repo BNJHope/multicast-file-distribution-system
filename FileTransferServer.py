@@ -14,7 +14,7 @@ class FileTransferServer(FileTransferAbstract):
         self.set_up_config_file_values()
 
     # initialise the server and loop
-    def run_server(self):
+    def run(self):
 
         # set up the server multicast socket to listen for requests
         self.set_up_listen_socket()
@@ -22,6 +22,27 @@ class FileTransferServer(FileTransferAbstract):
     # runs a listener for requests
     def server_loop(self):
         print("loop")
+
+    #handles when a tcp connection is made
+    def connection_made(self, transport):
+        peername = transport.get_extra_info('peername')
+        print('Connection from {}'.format(peername))
+        self.transport = transport
+
+    #handles messages received from client
+    def data_received(self, data):
+        message = data.decode()
+        print('Data received: {!r}'.format(message))
+
+        print('Send: {!r}'.format(message))
+        self.transport.write(data)
+
+        print('Close the client socket')
+        self.transport.close()
+        
+    #handles a given message from a client
+    def handle_message(message) :
+
 
     # broadcast a file over the MCAST port and address to any listeners
     def send_file(self):
@@ -41,6 +62,7 @@ class FileTransferServer(FileTransferAbstract):
         # send the numbers 0-99 to any listeners
         while True:
             sock.sendto(str.encode("ping from file transfer server"), (self.MCAST_ADDRESS, self.MCAST_PORT))
+
 
     # setup a listening socket
     def set_up_listen_socket(self):
