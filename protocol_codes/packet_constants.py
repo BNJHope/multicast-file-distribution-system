@@ -1,5 +1,11 @@
 class PacketKeyEnum :
 
+	# protocol statement
+	PROTOCOL_KEY = "prot"
+
+	# name of protocol
+	PROTOCOL_NAME = "BHP"
+
 	#packet type code
 	PACKET_TYPE = 'type'
 
@@ -9,12 +15,9 @@ class PacketKeyEnum :
 	# key used in packets to denote a file name
 	FILE_NAME_PACKET_KEY = "flnm"
 
-	# protocol statement
-	PROTCOL_KEY = "prot"
-
-	# name of protocol
-	PROTCOL_NAME = "BHP"
-
+	# uuid for the file that will be used in future transactions to represent the transmission
+	FILE_UUID = "flid"
+	
 	# separates general values in packet
 	VALUE_SEPARATOR = ';'
 

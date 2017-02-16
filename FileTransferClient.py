@@ -2,8 +2,9 @@ import socket
 
 from FileTransferAbstract import FileTransferAbstract
 
-
 class FileTransferClient(FileTransferAbstract):
+
+    target_nodes = ["pc3-033-l.cs.st-andrews.ac.uk"]
 
     # constructor for server
     def __init__(self):
@@ -11,10 +12,14 @@ class FileTransferClient(FileTransferAbstract):
         # read in values from the config file for MCAST_ADDRESS and MCAST_PORT
         self.set_up_config_file_values()
 
-    # ask all available servers if they possess the file
-    def request_for_file(self, filename):
+    # send a given file
+    def send_file(self, filename):
 
         self.assemble_file_request_packet(filename)
+
+    #   send the initial intro message for file transmission to all clients
+    def send_initial_file_message(self, filename):
+        
 
     # Listens on the port and multicast address for data
     def receive_data(self):
