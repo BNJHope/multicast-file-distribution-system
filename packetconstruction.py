@@ -24,13 +24,13 @@ class PacketConstructor :
 		return packet
 
 	# assemble packet for file init response
-	def assemble_file_resp_packet(self, uuid):
+	def assemble_file_resp_packet(self, file_uuid):
 
 		# list of all the packet data to have
 		packetdata = []
 
 		# uuid to determine the transfer id for future references to this file transfer
-		file_uuid_packet_data = self.assemble_packet_value(PacketKeyEnum.FILE_UUID, uuid)
+		file_uuid_packet_data = self.assemble_packet_value(PacketKeyEnum.FILE_UUID, file_uuid)
 
 		packetdata.append(file_uuid_packet_data)
 
@@ -39,11 +39,36 @@ class PacketConstructor :
 		return packet
 
 	# assemble packet for file start packet for meta data
-	def assemble_file_start_packet(self, filename, numberOfFileChunks) :
+	def assemble_file_start_packet(self, file_uuid, num_seqs) :
 
 		# list of all the packet data to have
 		packetdata = []
 
+		# uuid to determine the transfer id for future references to this file transfer
+		file_uuid_packet_data = self.assemble_packet_value(PacketKeyEnum.FILE_UUID, file_uuid)
+
+		# number of sequuences that will be sent
+		file_seqs_num = self.assemble_packet_value(PacketKeyEnum.NUM_OF_FILE_SEQUENCES , num_seqs)
+
+		packetdata.append(file_uuid_packet_data)
+		packetdata.append(file_seqs_num)
+
+		packet = self.assemble_generic_packet_parts(MessageCodeEnum.FILE_START_INFO, packetdata)
+
+		return packet
+
+	# assemble packet for a piece of file data, given which sequence it is a part of
+	# and also where in the sequence it lies
+	def assemble_file_data_packet(self, file_uuid, seq_id, chunk_id, file_data) :
+
+		# list of all the packet data to have
+		packetdata = []
+
+		# uuid to determine the transfer id for future references to this file transfer
+		file_uuid_packet_data = self.assemble_packet_value(PacketKeyEnum.FILE_UUID, file_uuid)
+	
+		# uuid to determine the transfer id for future references to this file transfer
+		seq_id_packet_data = self.assemble_packet_value(PacketKeyEnum.FILE_UUID, file_uuid)
 
 	# assembles the packet with the given packet type message and the packet segments
 	def assemble_generic_packet_parts(self, packettype, packetsegs) :
@@ -57,14 +82,18 @@ class PacketConstructor :
 		# the type of the message that we are sending
 		messagetype = self.assemble_packet_value(PacketKeyEnum.PACKET_TYPE, packettype)
 
-		# the packet content assembled
-		packetcontent = PacketKeyEnum.PACKET + PacketKeyEnum.MAPPING_SEPARATOR + PacketKeyEnum.PACKET_OPEN
+		# the application packet
+		packetcontent = PacketKeyEnum.PACKET_OPEN
 
+		# put the application packet together
 		for item in packetsegs :
 			packetcontent += item
 
 		# close the packet content
 		packetcontent += PacketKeyEnum.PACKET_CLOSE
+
+		# the application packet to add to the packet to send
+		app_packet = self.assemble_packet_value(PacketKeyEnum.PACKET, packetcontent)
 
 		# add protocol header to the packet
 		packet += protocolheader
@@ -72,8 +101,8 @@ class PacketConstructor :
 		# add message type to the header
 		packet += messagetype
 
-		# add packet contents to the packet
-		packet += packetcontent
+		# add application packet to the overall packet
+		packet += app_packet
 
 		return packet
 
