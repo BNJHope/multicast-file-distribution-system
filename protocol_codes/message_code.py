@@ -12,3 +12,12 @@ class MessageCodeEnum :
 
 	#Denotes a packet that contains file data
 	FILE_DATA = "4"
+
+	# denotes the end of a file transmission session
+	END_OF_FILE_TRANSMISSION = "5"
+
+	# missing packets message
+	MISSING_PACKETS_REQ = "6"
+
+	# transmission successful code
+	SUCCESSFUL_TRANSMISSION = "7"

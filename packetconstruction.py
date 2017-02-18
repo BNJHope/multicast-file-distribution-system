@@ -65,10 +65,24 @@ class PacketConstructor :
 		packetdata = []
 
 		# uuid to determine the transfer id for future references to this file transfer
-		file_uuid_packet_data = self.assemble_packet_value(PacketKeyEnum.FILE_UUID, file_uuid)
+		packetdata.append(self.assemble_packet_value(PacketKeyEnum.FILE_UUID, file_uuid))
 	
-		# uuid to determine the transfer id for future references to this file transfer
-		seq_id_packet_data = self.assemble_packet_value(PacketKeyEnum.FILE_UUID, file_uuid)
+		# sequence id - the sequence which this packet comes in
+		packetdata.append(self.assemble_packet_value(PacketKeyEnum.SEQUENCE_NUMBER, seq_id))
+
+		# chunk id - where the packet lies in the sequence of chunks
+		packetdata.append(self.assemble_packet_value(PacketKeyEnum.CHUNK_ID, chunk_id))
+
+		# file data - the actual data to be transmitted in this packet
+		packetdata.append(self.assemble_packet_value(PacketKeyEnum.FILE))
+
+		packet = self.assemble_generic_packet_parts(MessageCodeEnum.FILE_DATA, packetdata)
+
+		return packet
+
+	# assemble a packet for the end of transmission message
+	def assemble_end_transmission_packet(self, file_uuid) :
+	
 
 	# assembles the packet with the given packet type message and the packet segments
 	def assemble_generic_packet_parts(self, packettype, packetsegs) :

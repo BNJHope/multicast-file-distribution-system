@@ -17,7 +17,7 @@ class PacketKeyEnum :
 
 	# key used in packets to denote a number representing the 
 	# number of file chunk sequences to be sent
-	NUM_OF_FILE_CHUNKS = "nsqs"
+	NUM_OF_FILE_SEQUENCES = "nsqs"
 
 	# key for which sequence this chunk is part of
 	SEQUENCE_NUMBER = "sqid"
@@ -29,6 +29,9 @@ class PacketKeyEnum :
 	# uuid for the file that will be used in future transactions to represent the transmission
 	FILE_UUID = "flid"
 	
+	# data given by the chunk
+	FILE_DATA = "ckdt"
+
 	# separates general values in packet
 	VALUE_SEPARATOR = ';'
 
