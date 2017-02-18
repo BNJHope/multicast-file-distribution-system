@@ -11,13 +11,10 @@ class PacketConstructor :
 		packetdata = []
 
 		# the data for the filename to add to the packet
-		filename_packet_data = self.assemble_packet_value(PacketKeyEnum.FILE_NAME_PACKET_KEY, filename)
+		packetdata.append(self.assemble_packet_value(PacketKeyEnum.FILE_NAME_PACKET_KEY, filename))
 
 		# uuid to determine the transfer id for future references to this file transfer
-		file_uuid_packet_data = self.assemble_packet_value(PacketKeyEnum.FILE_UUID, file_uuid)
-
-		packetdata.append(filename_packet_data)
-		packetdata.append(file_uuid_packet_data)
+		packetdata.append(self.assemble_packet_value(PacketKeyEnum.FILE_UUID, file_uuid))
 
 		packet = self.assemble_generic_packet_parts(MessageCodeEnum.FILE_INIT, packetdata)
 
@@ -30,9 +27,7 @@ class PacketConstructor :
 		packetdata = []
 
 		# uuid to determine the transfer id for future references to this file transfer
-		file_uuid_packet_data = self.assemble_packet_value(PacketKeyEnum.FILE_UUID, file_uuid)
-
-		packetdata.append(file_uuid_packet_data)
+		packetdata.append(self.assemble_packet_value(PacketKeyEnum.FILE_UUID, file_uuid))
 
 		packet = self.assemble_generic_packet_parts(MessageCodeEnum.FILE_INIT_RESP, packetdata)
 
@@ -45,13 +40,10 @@ class PacketConstructor :
 		packetdata = []
 
 		# uuid to determine the transfer id for future references to this file transfer
-		file_uuid_packet_data = self.assemble_packet_value(PacketKeyEnum.FILE_UUID, file_uuid)
+		packetdata.append(self.assemble_packet_value(PacketKeyEnum.FILE_UUID, file_uuid))
 
 		# number of sequuences that will be sent
-		file_seqs_num = self.assemble_packet_value(PacketKeyEnum.NUM_OF_FILE_SEQUENCES , num_seqs)
-
-		packetdata.append(file_uuid_packet_data)
-		packetdata.append(file_seqs_num)
+		packetdata.append(self.assemble_packet_value(PacketKeyEnum.NUM_OF_FILE_SEQUENCES , num_seqs))
 
 		packet = self.assemble_generic_packet_parts(MessageCodeEnum.FILE_START_INFO, packetdata)
 
@@ -82,7 +74,13 @@ class PacketConstructor :
 
 	# assemble a packet for the end of transmission message
 	def assemble_end_transmission_packet(self, file_uuid) :
-	
+		
+
+	# assemble a packet for missing chunks
+	def assemble_missing_chunks_packet(self, file_uuid, missing_chunk_ids) :
+
+	# assemble a packet for successful transmission
+	def assemble_successful_transmission_packet(self, file_uuid) :
 
 	# assembles the packet with the given packet type message and the packet segments
 	def assemble_generic_packet_parts(self, packettype, packetsegs) :
