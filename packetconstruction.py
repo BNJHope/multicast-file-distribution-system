@@ -74,10 +74,30 @@ class PacketConstructor :
 
 	# assemble a packet for the end of transmission message
 	def assemble_end_transmission_packet(self, file_uuid) :
-		
+
+		# list of all the packet data to have
+		packetdata = []
+
+		# uuid to determine the transfer id for future references to this file transfer
+		packetdata.append(self.assemble_packet_value(PacketKeyEnum.FILE_UUID, file_uuid))
+
+		packet = self.assemble_generic_packet_parts(MessageCodeEnum.END_OF_FILE_TRANSMISSION, packetdata)
+
+		return packet
 
 	# assemble a packet for missing chunks
 	def assemble_missing_chunks_packet(self, file_uuid, missing_chunk_ids) :
+
+		# list of all the packet data to have
+		packetdata = []
+
+		# uuid to determine the transfer id for future references to this file transfer
+		packetdata.append(self.assemble_packet_value(PacketKeyEnum.FILE_UUID, file_uuid))
+
+		packet = self.assemble_generic_packet_parts(MessageCodeEnum.MISSING_PACKETS_REQ, packetdata)
+
+		return packet
+
 
 	# assemble a packet for successful transmission
 	def assemble_successful_transmission_packet(self, file_uuid) :
@@ -121,6 +141,21 @@ class PacketConstructor :
 	# takes a key and a value and assembles it in the packet format
 	def assemble_packet_value(self, key, value) :
 		return key + PacketKeyEnum.MAPPING_SEPARATOR + value + PacketKeyEnum.VALUE_SEPARATOR
+
+	# assembles the missing chunks part of the packet
+	def assemble_missing_chunks_data(self, missing_chunks) :
+
+		# the data that will be attached to the packet in the end
+		packet_value = ""
+
+		# for every chunk in the set of missing chunks, add it to
+		# the packet value to return 
+		for chunk in missing_chunks :
+
+
+
+		return packet_value
+
 
 def main() :
 	uuidtouse = str(uuid.uuid1())

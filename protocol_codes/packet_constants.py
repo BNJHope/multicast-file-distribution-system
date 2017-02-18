@@ -32,6 +32,9 @@ class PacketKeyEnum :
 	# data given by the chunk
 	FILE_DATA = "ckdt"
 
+	# represents the beginning of the section to hold the missing chunks
+	MISSING_CHUNK_IDS = "mids"
+
 	# separates general values in packet
 	VALUE_SEPARATOR = ';'
 

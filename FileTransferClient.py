@@ -1,10 +1,14 @@
 import socket
+import uuid
 
 from FileTransferAbstract import FileTransferAbstract
+from packetconstruction import PacketConstructor
 
 class FileTransferClient(FileTransferAbstract):
 
     target_nodes = ["pc3-033-l.cs.st-andrews.ac.uk"]
+
+    packet_constructor = None
 
     # constructor for server
     def __init__(self):
@@ -12,14 +16,22 @@ class FileTransferClient(FileTransferAbstract):
         # read in values from the config file for MCAST_ADDRESS and MCAST_PORT
         self.set_up_config_file_values()
 
+        # set up a new instance of the packet constructor
+        self.packet_constructor = PacketConstructor()
+
     # send a given file
     def send_file(self, filename):
 
-        self.assemble_file_request_packet(filename)
+        file_uuid = uuid.uuid1()
 
-    #   send the initial intro message for file transmission to all clients
-    def send_initial_file_message(self, filename):
+        self.send_initial_file_message(filename, file_uuid)
+
         
+
+    # send the initial intro message for file transmission to all clients
+    def send_initial_file_message(self, filename, file_uuid):
+
+        self.packet_constructor.assemble_file_init_packet(self, filename, file_uuid)
 
     # Listens on the port and multicast address for data
     def receive_data(self):
@@ -55,11 +67,3 @@ class FileTransferClient(FileTransferAbstract):
         while True:
             data, addr = sock.recvfrom(1024)
             print(data)
-
-    # assembles a packet to request for a file
-    def assemble_file_request_packet(filename):
-
-        # string for the packet to be sent
-        packet = ""
-
-        
