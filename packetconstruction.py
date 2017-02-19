@@ -1,6 +1,8 @@
+import struct
+import uuid
+
 from protocol_codes.packet_constants import PacketKeyEnum
 from protocol_codes.message_code import MessageCodeEnum
-import uuid
 
 class PacketConstructor :
 
@@ -101,6 +103,9 @@ class PacketConstructor :
 
 	# assemble a packet for successful transmission
 	def assemble_successful_transmission_packet(self, file_uuid) :
+
+	def assemble_generic_struct(self, packettype, packetsegs) :
+
 
 	# assembles the packet with the given packet type message and the packet segments
 	def assemble_generic_packet_parts(self, packettype, packetsegs) :

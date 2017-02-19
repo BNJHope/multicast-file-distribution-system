@@ -31,7 +31,10 @@ class FileTransferClient(FileTransferAbstract):
     # send the initial intro message for file transmission to all clients
     def send_initial_file_message(self, filename, file_uuid):
 
-        self.packet_constructor.assemble_file_init_packet(self, filename, file_uuid)
+        # the initial packet to send
+        initPacket = self.packet_constructor.assemble_file_init_packet(self, filename, file_uuid)
+
+
 
     # Listens on the port and multicast address for data
     def receive_data(self):
