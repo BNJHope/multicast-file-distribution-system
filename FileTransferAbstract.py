@@ -1,10 +1,6 @@
-import asyncio
+from file_transmission_config import FileTransmissionConfig
 
-class FileTransferAbstract(asyncio.Protocol) :
-
-    #name of the file that has contains all of the configuration
-    #information for the transmission
-    FILE_TRANSMISSION_CONFIG_FILENAME = "file_transmission_config"
+class FileTransferAbstract() :
 
     #address used for multicast
     MCAST_ADDRESS = ""
@@ -12,17 +8,15 @@ class FileTransferAbstract(asyncio.Protocol) :
 	#port used for connections on multicast
     MCAST_PORT = 0
     
+    # port over which TCP control messages will be sent between client and server
+    CONTROL_PORT = 0
+
 	#initialises the 
     def set_up_config_file_values(self) :
 
-		#open the config file to read the details in from it
-        configFile = open(self.FILE_TRANSMISSION_CONFIG_FILENAME, 'r')
+        #get common config values from the config class
+        self.MCAST_ADDRESS = FileTransmissionConfig.MCAST_ADDRESS
 
-        #read and assign values from the config file
-        addressLine = configFile.readline()
-        self.MCAST_ADDRESS = addressLine.strip()
+        self.MCAST_PORT = FileTransmissionConfig.MCAST_PORT
 
-        portLine = configFile.readline()
-        self.MCAST_PORT = int(portLine.strip())
-
-        configFile.close()
+        self.CONTROL_PORT = FileTransmissionConfig.CONTROL_PORT

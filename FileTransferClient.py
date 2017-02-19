@@ -1,14 +1,20 @@
 import socket
 import uuid
+import select 
 
 from FileTransferAbstract import FileTransferAbstract
 from packetconstruction import PacketConstructor
 
 class FileTransferClient(FileTransferAbstract):
 
-    target_nodes = ["pc3-033-l.cs.st-andrews.ac.uk"]
+    # address of the file server node
+    server_node = "pc3-035-l.cs.st-andrews.ac.uk"
 
+    # constructs packets to be sent between client and server
     packet_constructor = None
+
+    # socket connecting this client over TCP to the server
+    control_sock = None
 
     # constructor for server
     def __init__(self):
@@ -19,13 +25,51 @@ class FileTransferClient(FileTransferAbstract):
         # set up a new instance of the packet constructor
         self.packet_constructor = PacketConstructor()
 
+        # set up and connect to server socket
+        self.control_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    #=========
+    #TEST SECTION
+    #===========
+
+    # start the server loop
+    def listen_to_server(self) :
+
+        while True :
+
+            # connect to the server control port
+            try :
+                self.control_sock.connect((self.server_node, self.CONTROL_PORT))
+            except OSError as msg:
+                None
+
+            if not (self.control_sock is None) :
+                ready_to_read, ready_to_write, _ = \
+                   select.select(
+                      [],
+                      [self.control_sock],
+                      [])
+                if(ready_to_write != None) :
+                    print(ready_to_write)
+
+                with self.control_sock :
+                    print("connection with ", self.control_sock)
+                    
+                    while True :
+                        data = self.control_sock.recv(1024)
+                        if data :
+                            print(repr(data))
+
+    #=========
+    #TEST SECTION CLOSE
+    #===========
+
     # send a given file
     def send_file(self, filename):
 
         file_uuid = uuid.uuid1()
 
         self.send_initial_file_message(filename, file_uuid)
-
         
 
     # send the initial intro message for file transmission to all clients
@@ -35,9 +79,8 @@ class FileTransferClient(FileTransferAbstract):
         initPacket = self.packet_constructor.assemble_file_init_packet(self, filename, file_uuid)
 
 
-
     # Listens on the port and multicast address for data
-    def receive_data(self):
+    def receive_udp_segments(self):
 
         # Set up a UDP socket - flags specifies IPv4,
         # datagram socket.

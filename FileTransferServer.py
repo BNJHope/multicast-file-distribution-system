@@ -1,11 +1,21 @@
 import socket
+import select
+import uuid
 
 from FileTransferAbstract import FileTransferAbstract
+from packetconstruction import PacketConstructor
 
 class FileTransferServer(FileTransferAbstract):
 
-    # socket for listening to requests
-    listen_socket = None
+    target_nodes = ["pc3-034-l.cs.st-andrews.ac.uk"]
+
+    server_address = socket.gethostname()
+
+    # constructs packets to be sent between client and server
+    packet_constructor = None
+
+    # socket connecting this client over TCP to the server
+    server_sock = None
 
     # constructor for server
     def __init__(self):
@@ -13,40 +23,70 @@ class FileTransferServer(FileTransferAbstract):
         # read in values from the config file for MCAST_ADDRESS and MCAST_PORT
         self.set_up_config_file_values()
 
-    # initialise the server and loop
-    def run(self):
+        self.packet_constructor = PacketConstructor()
 
-        # set up the server multicast socket to listen for requests
-        self.set_up_listen_socket()
+        self.server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    # runs a listener for requests
-    def server_loop(self):
-        print("loop")
+    #=========
+    #TEST SECTION
+    #===========
 
-    #handles when a tcp connection is made
-    def connection_made(self, transport):
-        peername = transport.get_extra_info('peername')
-        print('Connection from {}'.format(peername))
-        self.transport = transport
+    def send_file(self, filename) :
 
-    #handles messages received from client
-    def data_received(self, data):
-        message = data.decode()
-        print('Data received: {!r}'.format(message))
+        # file id to pass for this file session
+        file_id = str(uuid.uuid1())
 
-        print('Send: {!r}'.format(message))
-        self.transport.write(data)
+        # send the init packet
+        self.send_init(filename, file_id)
 
-        print('Close the client socket')
-        self.transport.close()
         
+    # send a file to all available clients
+    def send_init(self, filename, file_uuid) :
+
+        self.server_sock.bind((self.server_address, self.CONTROL_PORT))
+
+        self.server_sock.listen(5)
+
+        while(True) :
+
+            ready_to_read, ready_to_write, _ = \
+                   select.select(
+                      [self.server_sock],
+                      [],
+                      [])
+
+            print(len(ready_to_read))
+            if len(ready_to_read) > 0 :
+                s = ready_to_read[0]
+                s.accept()
+                while True :
+                    packet = self.packet_constructor.assemble_file_init_packet(filename, file_uuid)
+                    sent = s.send(packet.encode())
+                    chunk = s.recv(100)
+                    print("trying to exit")
+
+        return
+
+    #=========
+    #TEST SECTION CLOSE
+    #===========
+        
+    # # starts the server
+    # def start_server() :
+
+    #     # create an INET, STREAMing socket
+    #     serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #     # bind the socket to a public host, and a well-known port
+    #     serversocket.bind((self., ))
+    #     # become a server socket
+    #     serversocket.listen(5)
+
     #handles a given message from a client
-    def handle_message(message) :
-        
+    # def handle_message(message) :
 
 
     # broadcast a file over the MCAST port and address to any listeners
-    def send_file(self):
+    def send_udp_segments(self):
 
         # define the socket as a IPv4 datagram socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -63,29 +103,3 @@ class FileTransferServer(FileTransferAbstract):
         # send the numbers 0-99 to any listeners
         while True:
             sock.sendto(str.encode("ping from file transfer server"), (self.MCAST_ADDRESS, self.MCAST_PORT))
-
-
-    # setup a listening socket
-    def set_up_listen_socket(self):
-
-        # Set up a UDP socket - flags specifies IPv4,
-        # datagram socket and UDP protocol in use.
-        self.listen_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-
-        self.listen_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        try:
-            self.listen_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
-
-        # Some systems don't support SO_REUSEPORT
-        except AttributeError:
-            pass
-
-        self.listen_socket.setsockopt(socket.SOL_IP, socket.IP_MULTICAST_TTL, 20)
-        self.listen_socket.setsockopt(socket.SOL_IP, socket.IP_MULTICAST_LOOP, 1)
-
-        self.listen_socket.bind((self.MCAST_ADDRESS, self.MCAST_PORT))
-
-        # interface provided by the local host name
-        intf = socket.gethostbyname(socket.gethostname())
-        self.listen_socket.setsockopt(socket.SOL_IP, socket.IP_MULTICAST_IF, socket.inet_aton(intf))
-        self.listen_socket.setsockopt(socket.SOL_IP, socket.IP_ADD_MEMBERSHIP, socket.inet_aton(self.MCAST_ADDRESS) + socket.inet_aton(intf))
