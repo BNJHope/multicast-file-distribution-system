@@ -3,22 +3,16 @@ import uuid
 
 from protocol_codes.packet_constants import PacketKeyEnum
 from protocol_codes.message_code import MessageCodeEnum
+from packet_construction_abstract import PacketStructFormats
 
-class PacketConstructor :
+class PacketConstructor(PacketStructFormats) :
 
 	# assembles a packet to start initial file transmission
-	def assemble_file_init_packet(self, filename, file_uuid):
+	def assemble_file_init_packet(self, filename, file_uuid, num_seqs):
 
-		# list of all the packet data to have
-		packetdata = []
+		app_packet = struct.pack(self.init_packet_format, filename, file_uuid, num_seqs)
 
-		# the data for the filename to add to the packet
-		packetdata.append(self.assemble_packet_value(PacketKeyEnum.FILE_NAME_PACKET_KEY, filename))
-
-		# uuid to determine the transfer id for future references to this file transfer
-		packetdata.append(self.assemble_packet_value(PacketKeyEnum.FILE_UUID, file_uuid))
-
-		packet = self.assemble_generic_packet_parts(MessageCodeEnum.FILE_INIT, packetdata)
+		packet = self.assemble_generic_packet_parts(MessageCodeEnum.FILE_INIT, app_packet)
 
 		return packet
 
@@ -108,8 +102,12 @@ class PacketConstructor :
 
 
 	# assembles the packet with the given packet type message and the packet segments
-	def assemble_generic_packet_parts(self, packettype, packetsegs) :
+	def assemble_generic_packet_parts(self, packettype, app_packet) :
 
+		#the packet format to be transmitted
+		packet_format = "3si"
+
+		packet_to_send = struct.pack(packet_format, )
 		# overall packet that we are sending
 		packet = ""
 

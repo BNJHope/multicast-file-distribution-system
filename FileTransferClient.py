@@ -35,30 +35,35 @@ class FileTransferClient(FileTransferAbstract):
     # start the server loop
     def listen_to_server(self) :
 
-        while True :
+        connected = False
+        
+        #while not connected
+        while not connected :
 
             # connect to the server control port
             try :
                 self.control_sock.connect((self.server_node, self.CONTROL_PORT))
+                connected = True
             except OSError as msg:
                 None
 
-            if not (self.control_sock is None) :
-                ready_to_read, ready_to_write, _ = \
-                   select.select(
-                      [],
-                      [self.control_sock],
-                      [])
-                if(ready_to_write != None) :
-                    print(ready_to_write)
+        if not (self.control_sock is None) :
+            ready_to_read, ready_to_write, _ = \
+               select.select(
+                  [],
+                  [self.control_sock],
+                  [])
+            if(ready_to_write != None) :
+                print(ready_to_write)
 
-                with self.control_sock :
-                    print("connection with ", self.control_sock)
-                    
-                    while True :
-                        data = self.control_sock.recv(1024)
-                        if data :
-                            print(repr(data))
+            with self.control_sock :
+                print("connection with ", self.control_sock)
+                
+                while True :
+                    data = self.control_sock.recv(1024)
+                    if data :
+                        print(repr(data))
+                        break;
 
     #=========
     #TEST SECTION CLOSE
