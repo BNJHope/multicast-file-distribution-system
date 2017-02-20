@@ -16,6 +16,9 @@ class FileTransferClient(FileTransferAbstract):
     # socket connecting this client over TCP to the server
     control_sock = None
 
+    # socket for receiving data over the udp connection
+    file_data_sock = None
+
     # constructor for server
     def __init__(self):
 
@@ -28,16 +31,14 @@ class FileTransferClient(FileTransferAbstract):
         # set up and connect to server socket
         self.control_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    #=========
-    #TEST SECTION
-    #===========
 
-    # start the server loop
-    def listen_to_server(self) :
+    # wait to receive a file from the server
+    def receive_file(self) :
 
+        # determines whether this client is connected to the server or not
         connected = False
         
-        #while not connected
+        #while not connected, keep trying to connect to the server
         while not connected :
 
             # connect to the server control port
@@ -47,42 +48,43 @@ class FileTransferClient(FileTransferAbstract):
             except OSError as msg:
                 None
 
-        if not (self.control_sock is None) :
-            ready_to_read, ready_to_write, _ = \
-               select.select(
-                  [],
-                  [self.control_sock],
-                  [])
-            if(ready_to_write != None) :
-                print(ready_to_write)
+        # pick out the socket connection to the server that
+        # we want to communicate with
+        ready_to_read, ready_to_write, _ = \
+           select.select(
+              [],
+              [self.control_sock],
+              [])
 
-            with self.control_sock :
-                print("connection with ", self.control_sock)
-                
-                while True :
-                    data = self.control_sock.recv(1024)
-                    if data :
-                        print(repr(data))
-                        break;
+        # the server socket connection
+        server_sock = ready_to_write[0]
 
-    #=========
-    #TEST SECTION CLOSE
-    #===========
-
-    # send a given file
-    def send_file(self, filename):
-
-        file_uuid = uuid.uuid1()
-
-        self.send_initial_file_message(filename, file_uuid)
+        print("connection with ", server_sock)
         
+        # initialise the transmission and get the number of sequences that
+        # will be made in return
+        num_of_seqs, file_descriptor = self.initialise_transmission(server_sock)
 
-    # send the initial intro message for file transmission to all clients
-    def send_initial_file_message(self, filename, file_uuid):
+        # receive the rest of the file transmission and
+        # write it to the given file
+        self.receive_file(num_of_seqs, file_to_write, server_sock)
 
-        # the initial packet to send
-        initPacket = self.packet_constructor.assemble_file_init_packet(self, filename, file_uuid)
 
+    # receive the initial packet with the server
+    def initialise_transmission(self, server_sock) :
+
+        # read this many bytes from the server
+        # for the init pack
+        init_pack_length = 1299
+
+        # read the initial data from the server
+        init_data_from_server = sock.recv(init_pack_length)
+
+        return -1, ""
+
+    # receive data from the udp connection and write it all to the file
+    def receive_file(self, file_to_write, num_of_seqs, control_sock) :
+        print("receiving file")
 
     # Listens on the port and multicast address for data
     def receive_udp_segments(self):
