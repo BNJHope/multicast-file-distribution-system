@@ -132,4 +132,9 @@ class PacketDeconstructor(PacketStructFormats) :
 		# the list of missing chunks
 		return missing_chunks_details + (list_of_chunks,)
 
-	
+	# parse a packet for successful transmission
+	def parse_successful_transmission_packet(packet) :
+
+		successful_transmission_format = self.general_header_format + self.successful_transmission_packet_format
+
+		return struct.unpack(successful_transmission_format, packet)
