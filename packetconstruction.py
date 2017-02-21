@@ -19,29 +19,9 @@ class PacketConstructor(PacketStructFormats) :
 	# assemble packet for file init response
 	def assemble_file_resp_packet(self, file_uuid):
 
-		# list of all the packet data to have
-		packetdata = []
+		app_packet = struct.pack(self.resp_packet_format, file_uuid)
 
-		# uuid to determine the transfer id for future references to this file transfer
-		packetdata.append(self.assemble_packet_value(PacketKeyEnum.FILE_UUID, file_uuid))
-
-		packet = self.assemble_generic_packet_parts(MessageCodeEnum.FILE_INIT_RESP, packetdata)
-
-		return packet
-
-	# assemble packet for file start packet for meta data
-	def assemble_file_start_packet(self, file_uuid, num_seqs) :
-
-		# list of all the packet data to have
-		packetdata = []
-
-		# uuid to determine the transfer id for future references to this file transfer
-		packetdata.append(self.assemble_packet_value(PacketKeyEnum.FILE_UUID, file_uuid))
-
-		# number of sequuences that will be sent
-		packetdata.append(self.assemble_packet_value(PacketKeyEnum.NUM_OF_FILE_SEQUENCES , num_seqs))
-
-		packet = self.assemble_generic_packet_parts(MessageCodeEnum.FILE_START_INFO, packetdata)
+		packet = self.assemble_generic_packet_parts(MessageCodeEnum.FILE_INIT_RESP, app_packet)
 
 		return packet
 
@@ -49,112 +29,66 @@ class PacketConstructor(PacketStructFormats) :
 	# and also where in the sequence it lies
 	def assemble_file_data_packet(self, file_uuid, seq_id, chunk_id, file_data) :
 
-		# list of all the packet data to have
-		packetdata = []
+		app_packet = struct.pack(self.file_data_packet_format, file_uuid, seq_id, chunk_id, file_data)
 
-		# uuid to determine the transfer id for future references to this file transfer
-		packetdata.append(self.assemble_packet_value(PacketKeyEnum.FILE_UUID, file_uuid))
-	
-		# sequence id - the sequence which this packet comes in
-		packetdata.append(self.assemble_packet_value(PacketKeyEnum.SEQUENCE_NUMBER, seq_id))
+		packet = self.assemble_generic_packet_parts(MessageCodeEnum.FILE_DATA, app_packet)
 
-		# chunk id - where the packet lies in the sequence of chunks
-		packetdata.append(self.assemble_packet_value(PacketKeyEnum.CHUNK_ID, chunk_id))
+		return packet
 
-		# file data - the actual data to be transmitted in this packet
-		packetdata.append(self.assemble_packet_value(PacketKeyEnum.FILE))
+	# assemble a packet for checking whether or not the client received
+	# all of the packets or not
+	def assemble_seq_check_packet(self, file_uuid, seq_id) :
 
-		packet = self.assemble_generic_packet_parts(MessageCodeEnum.FILE_DATA, packetdata)
+		app_packet = struct.pack(self.seq_check_packet_format, file_uuid, seq_id)
+
+		packet = self.assemble_generic_packet_parts(MessageCodeEnum.SEQ_CHECK, app_packet)
+
+		return packet
+
+	# assemble a packet to respond missing chunks call
+	def assemble_missing_chunks_packet(self, file_uuid, seq_id, is_missing_chunks, missing_chunk_ids) :
+
+		missing_chunks_part = ""
+		if is_missing_chunks :
+
+			missing_chunks_part = self.convert_missing_chunks_list(missing_chunk_ids)
+
+		else :
+
+			missing_chunks_part = ""
+
+		app_packet = struct.pack(self.missing_chunks_packet_format, file_uuid, seq_id) + self.
+
+		packet = self.assemble_generic_packet_parts(MessageCodeEnum.MISSING_PACKETS_REQ, app_packet)
 
 		return packet
 
 	# assemble a packet for the end of transmission message
-	def assemble_end_transmission_packet(self, file_uuid) :
+	def assemble_end_transmission_packet(self, file_uuid, last_seq, last_chunk) :
 
-		# list of all the packet data to have
-		packetdata = []
-
-		# uuid to determine the transfer id for future references to this file transfer
-		packetdata.append(self.assemble_packet_value(PacketKeyEnum.FILE_UUID, file_uuid))
+		app_packet = struct.pack(self.end_transmission_packet_format)
 
 		packet = self.assemble_generic_packet_parts(MessageCodeEnum.END_OF_FILE_TRANSMISSION, packetdata)
 
 		return packet
-
-	# assemble a packet for missing chunks
-	def assemble_missing_chunks_packet(self, file_uuid, missing_chunk_ids) :
-
-		# list of all the packet data to have
-		packetdata = []
-
-		# uuid to determine the transfer id for future references to this file transfer
-		packetdata.append(self.assemble_packet_value(PacketKeyEnum.FILE_UUID, file_uuid))
-
-		packet = self.assemble_generic_packet_parts(MessageCodeEnum.MISSING_PACKETS_REQ, packetdata)
-
-		return packet
-
 
 	# # assemble a packet for successful transmission
 	# def assemble_successful_transmission_packet(self, file_uuid) :
 
 	# def assemble_generic_struct(self, packettype, packetsegs) :
 
-
 	# assembles the packet with the given packet type message and the packet segments
 	def assemble_generic_packet_parts(self, packettype, app_packet) :
 
-		#the packet format to be transmitted
-		packet_format = "3si"
-
-		packet_to_send = struct.pack(packet_format, )
-		# overall packet that we are sending
-		packet = ""
-
-		# the protocol that the packet is using
-		protocolheader = self.assemble_packet_value(PacketKeyEnum.PROTOCOL_KEY, PacketKeyEnum.PROTOCOL_NAME)
-
-		# the type of the message that we are sending
-		messagetype = self.assemble_packet_value(PacketKeyEnum.PACKET_TYPE, packettype)
-
-		# the application packet
-		packetcontent = PacketKeyEnum.PACKET_OPEN
-
-		# put the application packet together
-		for item in packetsegs :
-			packetcontent += item
-
-		# close the packet content
-		packetcontent += PacketKeyEnum.PACKET_CLOSE
-
-		# the application packet to add to the packet to send
-		app_packet = self.assemble_packet_value(PacketKeyEnum.PACKET, packetcontent)
-
-		# add protocol header to the packet
-		packet += protocolheader
-
-		# add message type to the header
-		packet += messagetype
-
-		# add application packet to the overall packet
-		packet += app_packet
-
-		return packet
+		return packet_to_send = struct.pack(self.general_header_format, PacketKeyEnum.PROTOCOL_NAME, packettype) + app_packet
 
 	# takes a key and a value and assembles it in the packet format
 	def assemble_packet_value(self, key, value) :
 		return key + PacketKeyEnum.MAPPING_SEPARATOR + value + PacketKeyEnum.VALUE_SEPARATOR
 
-	# assembles the missing chunks part of the packet
-	# def assemble_missing_chunks_data(self, missing_chunks) :
+	# convert the list of missing pacets into a string
+	# of comma separated values of the packets
+	# that are missing
+	def convert_missing_chunks_list(missing_chunks_list) :
 
-	# 	# the data that will be attached to the packet in the end
-	# 	packet_value = ""
-
-	# 	# for every chunk in the set of missing chunks, add it to
-	# 	# the packet value to return 
-	# 	for chunk in missing_chunks :
-
-
-
-	# 	return packet_value
+		return PacketKeyEnum.DATA_SEPARATOR.join(missing_chunks_list)
