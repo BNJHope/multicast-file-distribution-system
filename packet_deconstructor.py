@@ -1,5 +1,6 @@
 import struct
 
+from packet_construction_abstract import PacketStructFormats
 from protocol_codes.packet_constants import PacketKeyConstants
 from protocol_codes.message_code import MessageCodeEnum
 from protocol_codes.server_return_codes import ServerReturnCodes
@@ -40,13 +41,13 @@ class PacketDeconstructor(PacketStructFormats) :
 		elif message_code == MessageCodeEnum.SEQ_CHECK : 
 			return self.parse_seq_check_packet(packet)
 
-		elif message_code = MessageCodeEnum.END_OF_FILE_TRANSMISSION :
+		elif message_code == MessageCodeEnum.END_OF_FILE_TRANSMISSION :
 			return self.parse_end_of_transmission_packet(packet)
 
-		elif message_code = MessageCodeEnum.MISSING_PACKETS_REQ :
+		elif message_code == MessageCodeEnum.MISSING_PACKETS_REQ :
 			return self.parse_missing_packets_req_packet(packet)
 
-		elif message_code = MessageCodeEnum.SUCCESSFUL_TRANSMISSION :
+		elif message_code == MessageCodeEnum.SUCCESSFUL_TRANSMISSION :
 			return self.parse_successful_transmission_packet(packet)
 
 		else : return ServerReturnCodes.INVALID_CODE_MATCH
@@ -126,7 +127,7 @@ class PacketDeconstructor(PacketStructFormats) :
 		missing_chunks_details = struct.unpack(missing_chunks_format, packet[:start_of_missing_chunks_list])
 
 		# get the file data from the end of the packet
-		list_of_chunks = packet[start_of_missing_chunks_list:]decode().split(PacketKeyConstants.DATA_SEPARATOR)
+		list_of_chunks = packet[start_of_missing_chunks_list:].decode().split(PacketKeyConstants.DATA_SEPARATOR)
 
 		# return a tuple containing the missing chunks details and
 		# the list of missing chunks

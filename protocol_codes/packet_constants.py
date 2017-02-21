@@ -1,4 +1,4 @@
-class PacketKeyContstants :
+class PacketKeyConstants :
 
 	# location of protocol statement in header
 	PROTOCOL_KEY_POS = 0
