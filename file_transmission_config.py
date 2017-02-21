@@ -16,11 +16,3 @@ class FileTransmissionConfig :
 
 	# number of packets per sequence
 	SEQUENCE_SIZE = 256
-
-	# size of a long long in the current version of Python
-	SIZE_OF_UNSIGNED_LONG_LONG = 8
-
-	# number of long long sequences to use to determine
-	# which packets are missing in the missing packets messages
-	NUMER_OF_MISSING_PACKET_REGISTERS = math.ceil(float(self.SEQUENCE_SIZE) / float(self.SIZE_OF_UNSIGNED_LONG_LONG))
-

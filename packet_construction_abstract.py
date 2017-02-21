@@ -28,20 +28,20 @@ class PacketStructFormats :
 	general_header_format = "3sI"
 
 	# the format for the init apcket
-	init_packet_format = self.file_name_format + self.file_uuid_format + self.seq_id_format
+	init_packet_format = file_uuid_format + seq_id_format
 
 	# the format for the response packet
-	resp_packet_format = self.file_uuid_format
+	resp_packet_format = file_uuid_format
 
 	# the format for a packet containing file data
-	file_data_packet_format = self.file_uuid_format + self.seq_id_format + self.chunk_id_format + self.file_data_format
+	file_data_packet_format = file_uuid_format + seq_id_format + chunk_id_format
 
 	# the format for the packet that checks that clients have received
 	# all of the packets
-	seq_check_packet_format = self.file_uuid_format + self.seq_id_format
+	seq_check_packet_format = file_uuid_format + seq_id_format
 
 	# the format for packets that are responding to the call for 
-	missing_chunks_packet_format = self.file_uuid_format + self.seq_id_format + self.is_missing_chunks_format
+	missing_chunks_packet_format = file_uuid_format + seq_id_format + is_missing_chunks_format
 
 	# format for the end transmission packet
-	end_transmission_packet_format = self.file_uuid_format + self.seq_id_format + self.chunk_id_format
+	end_transmission_packet_format = file_uuid_format + seq_id_format + chunk_id_format
