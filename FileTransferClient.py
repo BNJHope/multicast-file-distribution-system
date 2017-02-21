@@ -4,14 +4,19 @@ import select
 
 from FileTransferAbstract import FileTransferAbstract
 from packetconstruction import PacketConstructor
+from packet_deconstructor import PacketDeconstructor
+from file_transmission_config import FileTransmissionConfig
 
 class FileTransferClient(FileTransferAbstract):
 
     # address of the file server node
-    server_node = "pc3-035-l.cs.st-andrews.ac.uk"
+    server_node = ""
 
     # constructs packets to be sent between client and server
     packet_constructor = None
+
+    # parses packets from the server
+    packet_parser = None
 
     # socket connecting this client over TCP to the server
     control_sock = None
@@ -22,18 +27,27 @@ class FileTransferClient(FileTransferAbstract):
     # constructor for server
     def __init__(self):
 
+        self.server_node = FileTransmissionConfig.SERVER_ADDRESS
+
         # read in values from the config file for MCAST_ADDRESS and MCAST_PORT
         self.set_up_config_file_values()
 
         # set up a new instance of the packet constructor
         self.packet_constructor = PacketConstructor()
 
+        # make new instance of packet parser
+        self.packet_parser = PacketDeconstructor()
+
         # set up and connect to server socket
         self.control_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 
     # wait to receive a file from the server
-    def receive_file(self) :
+    def listen_for_file(self) :
+
+        self.control_sock.bind((socket.gethostname(), self.CONTROL_PORT))
+
+        self.control_sock.listen(5)
 
         # determines whether this client is connected to the server or not
         connected = False
@@ -41,33 +55,36 @@ class FileTransferClient(FileTransferAbstract):
         #while not connected, keep trying to connect to the server
         while not connected :
 
-            # connect to the server control port
-            try :
-                self.control_sock.connect((self.server_node, self.CONTROL_PORT))
-                connected = True
-            except OSError as msg:
-                None
+            # # connect to the server control port
+            # try :
+            #     self.control_sock.accept((self.server_node, self.CONTROL_PORT))
+            #     connected = True
+            # except Error as msg:
+            #     None
 
         # pick out the socket connection to the server that
         # we want to communicate with
-        ready_to_read, ready_to_write, _ = \
-           select.select(
-              [],
-              [self.control_sock],
-              [])
+            ready_to_read, ready_to_write, _ = \
+                select.select(
+                  [self.control_sock],
+                  [],
+                  [],
+                  0.1)
 
-        # the server socket connection
-        server_sock = ready_to_write[0]
+            if(len(ready_to_read) > 0) :
+                connected = True
+                conn, addr = self.control_sock.accept()
+                print("connection with ", addr)
+            
+                # initialise the transmission and get the number of sequences that
+                # will be made in return
+                init_packet = self.packet_parser.translate_packet(self.initialise_transmission(conn))
 
-        print("connection with ", server_sock)
-        
-        # initialise the transmission and get the number of sequences that
-        # will be made in return
-        num_of_seqs, file_descriptor = self.initialise_transmission(server_sock)
+                print(str(init_packet))
 
-        # receive the rest of the file transmission and
-        # write it to the given file
-        self.receive_file(num_of_seqs, file_to_write, server_sock)
+            # receive the rest of the file transmission and
+            # write it to the given file
+            # self.receive_file(num_of_seqs, file_to_write, server_sock)
 
 
     # receive the initial packet with the server
@@ -78,9 +95,9 @@ class FileTransferClient(FileTransferAbstract):
         init_pack_length = 1299
 
         # read the initial data from the server
-        init_data_from_server = sock.recv(init_pack_length)
+        init_data_from_server = server_sock.recv(init_pack_length)
 
-        return -1, ""
+        return init_data_from_server
 
     # receive data from the udp connection and write it all to the file
     def receive_file(self, file_to_write, num_of_seqs, control_sock) :

@@ -19,3 +19,9 @@ class FileTransmissionConfig :
 
 	# number of packets per sequence
 	SEQUENCE_SIZE = 256
+
+	# address of the server node
+	SERVER_ADDRESS = "pc3-035-l.cs.st-andrews.ac.uk"
+
+	# list of clients to address to
+	CLIENT_ADDRESS_LIST = ["pc3-032-l.cs.st-andrews.ac.uk", "pc3-031-l.cs.st-andrews.ac.uk"]

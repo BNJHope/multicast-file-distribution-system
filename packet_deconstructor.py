@@ -9,7 +9,7 @@ from file_transmission_config import FileTransmissionConfig
 class PacketDeconstructor(PacketStructFormats) :
 	
 	# translates a given packet
-	def translate_packet(packet) :
+	def translate_packet(self, packet) :
 
 		packet_header = ""
 
@@ -17,7 +17,7 @@ class PacketDeconstructor(PacketStructFormats) :
 		# if the struct cannot parse the packet then
 		# return a malformed packet error
 		try :
-			packet_header = struct.unpack(packet[:struct.calcsize(self.general_header_format)])
+			packet_header = struct.unpack(self.general_header_format , packet[:struct.calcsize(self.general_header_format)])
 		except struct.error:
 			return ServerReturnCodes.MALFORMED_PACKET
 
@@ -53,7 +53,7 @@ class PacketDeconstructor(PacketStructFormats) :
 		else : return ServerReturnCodes.INVALID_CODE_MATCH
 
 	# get the details from the init packet and send them back
-	def parse_init_packet(packet) :
+	def parse_init_packet(self, packet) :
 
 		# the format of the init packet struct
 		init_format = self.general_header_format + self.init_packet_format
@@ -72,7 +72,7 @@ class PacketDeconstructor(PacketStructFormats) :
 		return init_details + (filename,)
 
 	# parse a response to an initial init packet
-	def parse_init_resp_packet(packet) :
+	def parse_init_resp_packet(self, packet) :
 
 		# the format of the init response packet struct
 		resp_format = self.general_header_format + self.resp_packet_format
@@ -80,7 +80,7 @@ class PacketDeconstructor(PacketStructFormats) :
 		return struct.unpack(resp_format, packet)
 
 	# parse a file data packet
-	def parse_file_data_packet(packet) :
+	def parse_file_data_packet(self, packet) :
 
 		# the format of the first struct part of the data packet
 		data_pack_format = self.general_header_format + self.file_data_packet_format
@@ -99,7 +99,7 @@ class PacketDeconstructor(PacketStructFormats) :
 		return file_data_details + (file_data,)
 
 	# parse a sequence check packet
-	def parse_seq_check_packet(packet) :
+	def parse_seq_check_packet(self, packet) :
 
 		# the format of the init response packet struct
 		seq_check_format = self.general_header_format + self.seq_check_packet_format
@@ -108,14 +108,14 @@ class PacketDeconstructor(PacketStructFormats) :
 
 	# parse a packet that indicates the end of a 
 	# file transmission
-	def parse_end_of_transmission_packet(packet) :
+	def parse_end_of_transmission_packet(self, packet) :
 
 		end_transmission_format = self.general_header_format + self.end_transmission_packet_format
 
 		return struct.unpack(end_transmission_format, packet)
 
 	# parse a packet for missing chunks
-	def parse_missing_packets_req_packet(packet) :
+	def parse_missing_packets_req_packet(self, packet) :
 
 		# the format of the first struct part of the data packet
 		missing_chunks_format = self.general_header_format + self.missing_chunks_packet_format
@@ -134,7 +134,7 @@ class PacketDeconstructor(PacketStructFormats) :
 		return missing_chunks_details + (list_of_chunks,)
 
 	# parse a packet for successful transmission
-	def parse_successful_transmission_packet(packet) :
+	def parse_successful_transmission_packet(self, packet) :
 
 		successful_transmission_format = self.general_header_format + self.successful_transmission_packet_format
 

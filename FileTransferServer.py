@@ -11,7 +11,10 @@ from file_transmission_config import FileTransmissionConfig
 class FileTransferServer(FileTransferAbstract):
 
     # target nodes to go for
-    target_nodes = ["pc3-034-l.cs.st-andrews.ac.uk"]
+    target_node_addresses = None
+
+    # the set of connections to target nodes
+    target_nodes = []
 
     # current address of the server
     server_address = socket.gethostname()
@@ -19,15 +22,14 @@ class FileTransferServer(FileTransferAbstract):
     # constructs packets to be sent between client and server
     packet_constructor = None
 
-    # socket connecting server to clients to send and receive
-    # control messages
-    server_control_sock = None
-
     # socket that broadcasts file segments to all listening clients
     filestream_udp_sock = None
 
     # constructor for server
     def __init__(self):
+
+        # get the list of target nodes from the file transmission config
+        self.target_node_addresses = FileTransmissionConfig.CLIENT_ADDRESS_LIST
 
         # read in values from the config file for MCAST_ADDRESS and MCAST_PORT
         self.set_up_config_file_values()
@@ -35,18 +37,17 @@ class FileTransferServer(FileTransferAbstract):
         # initialise a new packet constructor
         self.packet_constructor = PacketConstructor()
 
-        # set up the TCP control connection
-        self.server_control_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
         #set up the udp socket
         self.filestream_udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.filestream_udp_sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 20)
 
-    def send_file(self, filename) :
+    def start_send_file(self, filename) :
+
+        self.set_up_sockets()
 
         # get the number of sequences that will be used in the file transmission
         # to split the file up
-        num_seqs = self.get_num_of_seqs(filename)
+        num_seqs =  52 # self.get_num_of_seqs(filename)
 
         # file id to pass for this file session
         file_id = str(uuid.uuid1())
@@ -54,30 +55,34 @@ class FileTransferServer(FileTransferAbstract):
         # send the init packet
         self.send_init(filename, file_id, num_seqs)
 
-        self.send_file(filename, file_id, num_seqs)
+        # self.send_file(filename, file_id, num_seqs)
         
     # send a file to all available clients
     def send_init(self, filename, file_uuid, num_seqs) :
 
-        self.server_control_sock.bind((self.server_address, self.CONTROL_PORT))
+        stay_connected = True
 
-        self.server_control_sock.listen(5)
-
-        while(True) :
+        while(stay_connected) :
 
             ready_to_read, ready_to_write, err = \
                    select.select(
-                      [self.server_control_sock],
                       [],
+                      self.target_nodes,
                       [],
-                      0.0001)
+                      0.1)
 
-            print(len(ready_to_read), len(ready_to_write))
-            for s in ready_to_read :
-                conn, _ = s.accept()
-                packet = self.packet_constructor.assemble_file_init_packet(filename, file_uuid)
-                sent = conn.send(packet.encode())
-                print("trying to exit")
+            print(len(ready_to_write))
+
+            # for every connection in the ready to read list
+            for s in ready_to_write :
+
+                stay_connected = False
+
+                # assemble the file transmission init packet
+                packet = self.packet_constructor.assemble_file_init_packet(filename, file_uuid, num_seqs)
+                sent = s.send(packet)
+                print("closing connection")
+                s.close()
 
         return
 
@@ -153,3 +158,22 @@ class FileTransferServer(FileTransferAbstract):
         total_chunks = math.ceil(float(size_of_file) / float(FileTransmissionConfig.FILE_DATA_PER_PACKET_AMOUNT))
 
         return math.ceil(float(total_chunks) / float(FileTransmissionConfig.SEQUENCE_SIZE)) 
+
+    # set up the socket connections
+    def set_up_sockets(self) :
+
+        # for every node address in the set of target
+        # node addresses
+        for index in range(len(self.target_node_addresses)) :
+
+            #get the current node_addr to work with
+            node_addr = self.target_node_addresses[index]
+
+            # make a new socket with the addresses
+            new_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+            # connect the socket
+            new_sock.connect((node_addr, self.CONTROL_PORT))
+
+            # put the socket connection in the list
+            self.target_nodes.append(new_sock)

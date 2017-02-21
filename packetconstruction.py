@@ -4,6 +4,7 @@ import uuid
 from protocol_codes.packet_constants import PacketKeyConstants
 from protocol_codes.message_code import MessageCodeEnum
 from packet_construction_abstract import PacketStructFormats
+from file_transmission_config import FileTransmissionConfig
 
 class PacketConstructor(PacketStructFormats) :
 
