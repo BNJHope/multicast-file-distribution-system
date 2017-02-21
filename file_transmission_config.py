@@ -2,6 +2,9 @@ import math
 
 class FileTransmissionConfig :
 
+	# name of protocol
+	PROTOCOL_NAME = "BHP"
+	
 	#the address for all multicast operations to happen on
 	MCAST_ADDRESS = "229.229.229.229"
 

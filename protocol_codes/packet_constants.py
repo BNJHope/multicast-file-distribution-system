@@ -1,51 +1,39 @@
 class PacketKeyEnum :
 
-	# protocol statement
-	PROTOCOL_KEY = "prot"
-
-	# name of protocol
-	PROTOCOL_NAME = "BHP"
+	# location of protocol statement in header
+	PROTOCOL_KEY_POS = 0
 
 	#packet type code
-	PACKET_TYPE = 'type'
+	PACKET_TYPE_POS = 1
 
-	#packet content
-	PACKET = 'pack'
+	#position of the file uuid in the packet
+	INIT_FILE_UUID_POS = 2
 
-	# key used in packets to denote a file name
-	FILE_NAME_PACKET_KEY = "flnm"
+	# position of where the num of sequences is
+	# in the initial packet
+	INIT_NUM_OF_FILE_SEQUENCES_POS = 3
 
-	# key used in packets to denote a number representing the 
-	# number of file chunk sequences to be sent
-	NUM_OF_FILE_SEQUENCES = "nsqs"
+	# location of file uuid in resp
+	INIT_RESP_FILE_UUID_POS = 2
 
-	# key for which sequence this chunk is part of
-	SEQUENCE_NUMBER = "sqid"
+	# position of file uuid in file data packet
+	DATA_FILE_UUID_POS = 2
 
-	# key for which chunk in a sequence of packets this chunk
-	# is part of
-	CHUNK_ID = "ckid"
+	# position of seq id in file data packet
+	DATA_SEQUENCE_NUMBER_POS = 3
 
-	# uuid for the file that will be used in future transactions to represent the transmission
-	FILE_UUID = "flid"
-	
-	# data given by the chunk
-	FILE_DATA = "ckdt"
+	# position of data chunk id in file data packet
+	DATA_CHUNK_ID_POS = 4
 
-	# represents the beginning of the section to hold the missing chunks
-	MISSING_CHUNK_IDS = "mids"
+	# position of file id in missing chunk packet
+	MISSING_CHUNKS_ID_POS = 2
 
-	# separates general values in packet
-	VALUE_SEPARATOR = ';'
+	# position of seq id in missing chunks packet
+	MISSING_CHUNKS_SEQ_ID_POS = 3
+
+	# position of the boolean determining if there are
+	# chunks missing or not in the packet
+	MISSING_CHUNKS_IS_MISSING_CHUNKS_POS = 4
 
 	#multiple data separator
 	DATA_SEPARATOR = ','
-
-	#denotes that a given key is mapped to a given value
-	MAPPING_SEPARATOR = ":"
-
-	#denotes the opening of the packet data
-	PACKET_OPEN = "{"
-
-	#denotes the closing of the packet data
-	PACKET_CLOSE = "}"

@@ -71,7 +71,7 @@ class PacketConstructor(PacketStructFormats) :
 
 	# assembles the packet with the given packet type message and the packet segments
 	def assemble_generic_packet_parts(self, packettype, app_packet) :
-		return struct.pack(self.general_header_format.encode(), PacketKeyEnum.PROTOCOL_NAME.encode(), packettype) + app_packet
+		return struct.pack(self.general_header_format.encode(), FileTransmissionConfig.PROTOCOL_NAME.encode(), packettype) + app_packet
 
 	# convert the list of missing pacets into a string
 	# of comma separated values of the packets
@@ -79,23 +79,3 @@ class PacketConstructor(PacketStructFormats) :
 	def convert_missing_chunks_list(missing_chunks_list) :
 
 		return PacketKeyEnum.DATA_SEPARATOR.join(missing_chunks_list)
-
-# def main() :
-# 	p = PacketConstructor()
-# 	id = uuid.uuid1()
-
-# 	init_pack = p.assemble_file_init_packet("filename.txt", id, 5)
-# 	init_format = p.general_header_format + p.init_packet_format
-# 	print("Details : " + str(struct.unpack(init_format, init_pack[:struct.calcsize(init_format)])) + "File name : " + init_pack[56:].decode())
-
-# 	resp_pack = p.assemble_file_resp_packet(id)
-# 	resp_format = p.general_header_format + p.resp_packet_format
-# 	print("Details : " + str(struct.unpack(resp_format, resp_pack[:struct.calcsize(resp_format)])))
-
-# 	data_pack = p.assemble_file_data_packet(id, 4, 6, "jdklawjlkjfajglkjajgijojgsoijeog")
-# 	data_pack_format = p.general_header_format + p.file_data_packet_format
-# 	print("Details : " + str(struct.unpack(data_pack_format, data_pack[:struct.calcsize(data_pack_format)])))
-# 	print("File data : " + data_pack[struct.calcsize(data_pack_format):].decode())
-# 	print(p.assemble_seq_check_packet(id, 4) )
-
-# main()
