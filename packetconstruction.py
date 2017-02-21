@@ -1,7 +1,7 @@
 import struct
 import uuid
 
-from protocol_codes.packet_constants import PacketKeyEnum
+from protocol_codes.packet_constants import PacketKeyConstants
 from protocol_codes.message_code import MessageCodeEnum
 from packet_construction_abstract import PacketStructFormats
 
@@ -65,10 +65,20 @@ class PacketConstructor(PacketStructFormats) :
 
 		app_packet = struct.pack(self.end_transmission_packet_format, str(file_uuid).encode(), last_seq, last_chunk)
 
-		packet = self.assemble_generic_packet_parts(MessageCodeEnum.END_OF_FILE_TRANSMISSION, packetdata)
+		packet = self.assemble_generic_packet_parts(MessageCodeEnum.END_OF_FILE_TRANSMISSION, app_packet)
 
 		return packet
 
+	# assebmle a packet indicating that a client successfully received
+	# the file transmission
+	def assemble_successful_transmission_packet(self, file_uuid) :
+
+		app_packet = struct.pack(self.successful_transmission_packet_format, str(file_uuid).encode())
+
+		packet = self.assemble_generic_packet_parts(MessageCodeEnum.SUCCESSFUL_TRANSMISSION, app_packet)
+
+		return packet
+		
 	# assembles the packet with the given packet type message and the packet segments
 	def assemble_generic_packet_parts(self, packettype, app_packet) :
 		return struct.pack(self.general_header_format.encode(), FileTransmissionConfig.PROTOCOL_NAME.encode(), packettype) + app_packet
@@ -78,4 +88,4 @@ class PacketConstructor(PacketStructFormats) :
 	# that are missing
 	def convert_missing_chunks_list(missing_chunks_list) :
 
-		return PacketKeyEnum.DATA_SEPARATOR.join(missing_chunks_list)
+		return PacketKeyContstants.DATA_SEPARATOR.join(missing_chunks_list)

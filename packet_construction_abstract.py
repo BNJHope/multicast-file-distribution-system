@@ -45,3 +45,6 @@ class PacketStructFormats :
 
 	# format for the end transmission packet
 	end_transmission_packet_format = file_uuid_format + seq_id_format + chunk_id_format
+
+	# format for the successful transmission packet
+	successful_transmission_packet_format = file_uuid_format

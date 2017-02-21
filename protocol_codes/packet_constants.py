@@ -1,4 +1,4 @@
-class PacketKeyEnum :
+class PacketKeyContstants :
 
 	# location of protocol statement in header
 	PROTOCOL_KEY_POS = 0
@@ -24,6 +24,14 @@ class PacketKeyEnum :
 
 	# position of data chunk id in file data packet
 	DATA_CHUNK_ID_POS = 4
+
+	# the position of the file uuid in
+	# the sequence check packet
+	SEQ_CHECK_FILE_UUID_POS = 2
+
+	# the position of the sequence id in
+	# the sequence check packet
+	SEQ_CHECK_SEQ_ID_POS = 3
 
 	# position of file id in missing chunk packet
 	MISSING_CHUNKS_ID_POS = 2
