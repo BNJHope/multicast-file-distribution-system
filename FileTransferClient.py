@@ -6,6 +6,7 @@ from FileTransferAbstract import FileTransferAbstract
 from packetconstruction import PacketConstructor
 from packet_deconstructor import PacketDeconstructor
 from file_transmission_config import FileTransmissionConfig
+from protocol_codes.packet_constants import PacketKeyConstants
 
 class FileTransferClient(FileTransferAbstract):
 
@@ -24,6 +25,12 @@ class FileTransferClient(FileTransferAbstract):
     # socket for receiving data over the udp connection
     file_data_sock = None
 
+    # the connection set up with the server
+    server_connection = None
+
+    # the file which we write to
+    file_to_write = None
+
     # constructor for server
     def __init__(self):
 
@@ -41,7 +48,6 @@ class FileTransferClient(FileTransferAbstract):
         # set up and connect to server socket
         self.control_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-
     # wait to receive a file from the server
     def listen_for_file(self) :
 
@@ -55,13 +61,6 @@ class FileTransferClient(FileTransferAbstract):
         #while not connected, keep trying to connect to the server
         while not connected :
 
-            # # connect to the server control port
-            # try :
-            #     self.control_sock.accept((self.server_node, self.CONTROL_PORT))
-            #     connected = True
-            # except Error as msg:
-            #     None
-
         # pick out the socket connection to the server that
         # we want to communicate with
             ready_to_read, ready_to_write, _ = \
@@ -71,68 +70,151 @@ class FileTransferClient(FileTransferAbstract):
                   [],
                   0.1)
 
+            # when a connection with the server is made...
             if(len(ready_to_read) > 0) :
+
+                # make sure to break the loop
                 connected = True
-                conn, addr = self.control_sock.accept()
-                print("connection with ", addr)
-            
-                # initialise the transmission and get the number of sequences that
-                # will be made in return
-                init_packet = self.packet_parser.translate_packet(self.initialise_transmission(conn))
 
-                print(str(init_packet))
+                # start begin the interaction with the server
+                self.start_server_interation()
 
-            # receive the rest of the file transmission and
-            # write it to the given file
-            # self.receive_file(num_of_seqs, file_to_write, server_sock)
 
+    # begins the process of receiving
+    # a file from the server
+    def start_server_interation(self) :
+
+        # get the connection and the address from accepting
+        # the connection
+        conn, addr = self.control_sock.accept()
+        print("connection with ", addr)
+    
+        self.server_connection = conn
+
+        # initialise the transmission and get the number of sequences that
+        # will be made in return
+        init_packet = self.packet_parser.translate_packet(self.initialise_transmission(conn))
+
+        print(str(init_packet))
+
+        # get the session uuid
+        session_uuid = init_packet[PacketKeyConstants.INIT_FILE_UUID_POS]
+
+        # get the number of sequences to be sent from the init packet
+        num_of_seqs = init_packet[PacketKeyConstants.INIT_NUM_OF_FILE_SEQUENCES_POS]
+
+        # get the file name from the init packet
+        file_name = init_packet[PacketKeyConstants.INIT_FILENAME_POS]
+
+        # receive the rest of the file transmission and
+        # write it to the given file
+        self.receive_file(session_uuid, file_name, num_of_seqs)
+
+    # receive data from the udp connection and write it all to the file
+    def receive_file(self, uuid, file_name, num_of_seqs) :
+        
+        transmission_complete = False
+
+        sequence_complete = False
+
+        current_sequence_id = 0
+
+        current_chunk_id = 0
+
+        missed_packets = []
+
+        # set up the udp stream ready to receive files
+        self.setup_file_data_socket()
+
+        self.set_up_file_to_write(file_name)
+
+        self.send_init_response()
+
+        # while we still have file data to receive
+        while not transmission_complete :
+
+            # while the end of the sequence has not yet been reached
+            while not sequence_complete :
+
+                # receive a file data packet
+                raw_file_data_packet, _ = sock.recvfrom(1024)
+
+                refined_file_data_packet = self.packet_parser.translate_packet(raw_file_data_packet)
+
+                if(refined_file_data_packet[PacketKeyConstants.DATA_FILE_UUID_POS] == uuid ) :
+
+                    if( refined_file_data_packet[PacketKeyConstants.DATA_SEQUENCE_NUMBER_POS] == current_sequence_id) :
+
+                        if(refined_file_data_packet[PacketKeyConstants.DATA_CHUNK_ID_POS] == current_chunk_id ) :
+
+
+                        else : missed_packets.extend(self.get_missed_packets(current_chunk_id, refined_file_data_packet[PacketKeyConstants.DATA_CHUNK_ID_POS]))
+
+                    else : print("Missed segment : " + current_sequence_id)
+
+                else : print("UUID incorrect")
+
+
+
+
+    # set up the file descriptor for writing the file to
+    def set_up_file_to_write(self, filename) :
+
+        # creates a new file
+        file_to_receive = open("received." + filename, 'a+')
+
+        # sets this client's file to write as
+        # the file that we just created
+        self.file_to_write = file_to_receive
 
     # receive the initial packet with the server
     def initialise_transmission(self, server_sock) :
 
         # read this many bytes from the server
         # for the init pack
-        init_pack_length = 1299
+        init_pack_length = struct.calcsize(self.packet_constructor.general_header_format + self.packet_constructor.init_packet_format) + FileTransmissionConfig.MAX_FILE_NAME_LENGTH
 
         # read the initial data from the server
         init_data_from_server = server_sock.recv(init_pack_length)
 
         return init_data_from_server
 
-    # receive data from the udp connection and write it all to the file
-    def receive_file(self, file_to_write, num_of_seqs, control_sock) :
-        print("receiving file")
+    # send a response to the server that the connection is ready to transmit
+    def send_init_response(self, uuid) :
 
-    # Listens on the port and multicast address for data
-    def receive_udp_segments(self):
+        packet = self.packet_constructor.assemble_file_resp_packet(uuid)
+
+        sent_bytes = self.server_connection.send(packet)
+
+    # sets up the udp file data socket
+    def setup_file_data_socket(self) :
 
         # Set up a UDP socket - flags specifies IPv4,
         # datagram socket.
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.file_data_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.file_data_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+            self.file_data_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
 
         # Some systems don't support SO_REUSEPORT
         except AttributeError:
             pass
 
-        sock.setsockopt(socket.SOL_IP, socket.IP_MULTICAST_TTL, 20)
-        sock.setsockopt(socket.SOL_IP, socket.IP_MULTICAST_LOOP, 1)
+        self.file_data_sock.setsockopt(socket.SOL_IP, socket.IP_MULTICAST_TTL, 20)
+        self.file_data_sock.setsockopt(socket.SOL_IP, socket.IP_MULTICAST_LOOP, 1)
 
-        sock.bind((self.MCAST_ADDRESS, self.MCAST_PORT))
+        self.file_data_sock.bind((self.MCAST_ADDRESS, self.MCAST_PORT))
 
         # interface provided by the local host name
         intf = socket.gethostbyname(socket.gethostname())
-        sock.setsockopt(socket.SOL_IP, socket.IP_MULTICAST_IF, socket.inet_aton(intf))
-        sock.setsockopt(socket.SOL_IP, socket.IP_ADD_MEMBERSHIP, socket.inet_aton(self.MCAST_ADDRESS) + socket.inet_aton(intf))
+        self.file_data_sock.setsockopt(socket.SOL_IP, socket.IP_MULTICAST_IF, socket.inet_aton(intf))
+        self.file_data_sock.setsockopt(socket.SOL_IP, socket.IP_ADD_MEMBERSHIP, socket.inet_aton(self.MCAST_ADDRESS) + socket.inet_aton(intf))
 
-        print("Addr " + self.MCAST_ADDRESS)
-        print("Port " + str(self.MCAST_PORT))
-        print("Socket " + str(sock))
+        
 
-        print("Socket bound")
+    # Listens on the port and multicast address for data
+    def receive_udp_segments(self):
 
         while True:
             data, addr = sock.recvfrom(1024)

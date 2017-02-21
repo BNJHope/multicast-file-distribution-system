@@ -47,7 +47,7 @@ class FileTransferServer(FileTransferAbstract):
 
         # get the number of sequences that will be used in the file transmission
         # to split the file up
-        num_seqs =  52 # self.get_num_of_seqs(filename)
+        num_seqs = self.get_num_of_seqs(filename)
 
         # file id to pass for this file session
         file_id = str(uuid.uuid1())

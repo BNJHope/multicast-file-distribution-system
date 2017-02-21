@@ -25,3 +25,6 @@ class FileTransmissionConfig :
 
 	# list of clients to address to
 	CLIENT_ADDRESS_LIST = ["pc3-032-l.cs.st-andrews.ac.uk", "pc3-031-l.cs.st-andrews.ac.uk"]
+
+	# maximum length of a file name in a packet
+	MAX_FILE_NAME_LENGTH = 20

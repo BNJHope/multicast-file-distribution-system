@@ -13,6 +13,9 @@ class PacketKeyConstants :
 	# in the initial packet
 	INIT_NUM_OF_FILE_SEQUENCES_POS = 3
 
+	# location of filename in local tuple
+	INIT_FILENAME_POS = 4
+
 	# location of file uuid in resp
 	INIT_RESP_FILE_UUID_POS = 2
 
@@ -24,6 +27,9 @@ class PacketKeyConstants :
 
 	# position of data chunk id in file data packet
 	DATA_CHUNK_ID_POS = 4
+
+	# location of file data in local tuple
+	DATA_FILE_DATA_POS = 5
 
 	# the position of the file uuid in
 	# the sequence check packet
@@ -38,6 +44,9 @@ class PacketKeyConstants :
 
 	# position of seq id in missing chunks packet
 	MISSING_CHUNKS_SEQ_ID_POS = 3
+
+	# list of missing chunks location
+	MISSING_CHUNKS_LIST_OF_MISSING_CHUNKS = 4
 
 	# position of the boolean determining if there are
 	# chunks missing or not in the packet
