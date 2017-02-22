@@ -175,9 +175,10 @@ class FileTransferClient(FileTransferAbstract):
                 if(len(ready_to_read) > 0) :
 
 
+
     # get the missing packets from the server
     # and write them to the file
-    def send_missing_packs_request() :
+    def send_missing_packs_request(self) :
         
 
     # get a list of the packets that have been missed depending on the last
