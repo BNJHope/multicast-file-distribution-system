@@ -137,24 +137,67 @@ class FileTransferClient(FileTransferAbstract):
             while not sequence_complete :
 
                 # receive a file data packet
-                raw_file_data_packet, _ = sock.recvfrom(1024)
+                raw_file_data_packet, _ = self.file_data_sock.recvfrom(1024)
 
                 refined_file_data_packet = self.packet_parser.translate_packet(raw_file_data_packet)
 
-                if(refined_file_data_packet[PacketKeyConstants.DATA_FILE_UUID_POS] == uuid ) :
+                receive_file_uuid = refined_file_data_packet[PacketKeyConstants.DATA_FILE_UUID_POS]
+                
+                received_file_seq_id = refined_file_data_packet[PacketKeyConstants.DATA_SEQUENCE_NUMBER_POS]
 
-                    if( refined_file_data_packet[PacketKeyConstants.DATA_SEQUENCE_NUMBER_POS] == current_sequence_id) :
+                received_file_chunk_id = refined_file_data_packet[PacketKeyConstants.DATA_CHUNK_ID_POS]
 
-                        if(refined_file_data_packet[PacketKeyConstants.DATA_CHUNK_ID_POS] == current_chunk_id ) :
+                # if the session uuid's do not match then identify this problem
+                if receive_file_uuid == uuid :
 
+                    # if sequence ids don't match then highlight the problem
+                    if received_file_seq_id == current_sequence_id :
 
-                        else : missed_packets.extend(self.get_missed_packets(current_chunk_id, refined_file_data_packet[PacketKeyConstants.DATA_CHUNK_ID_POS]))
+                        # if chunk id's don't match then extend the missing packets list
+                        # but still write to the file
+                        if received_file_chunk_id != current_chunk_id  :
+
+                            missed_packets.extend(self.get_missed_packets(current_chunk_id, refined_file_data_packet[PacketKeyConstants.DATA_CHUNK_ID_POS]))
+
+                        self.write_data_to_file()
 
                     else : print("Missed segment : " + current_sequence_id)
 
                 else : print("UUID incorrect")
 
+                ready_to_read, ready_to_write, _ = \
+                select.select(
+                    [self.server_connection],
+                    [],
+                    [],
+                    0.0001)
 
+                if(len(ready_to_read) > 0) :
+
+
+    # get the missing packets from the server
+    # and write them to the file
+    def send_missing_packs_request() :
+        
+
+    # get a list of the packets that have been missed depending on the last
+    # received chunk and the most recently received chunk
+    def get_missed_packets(self, current_chunk_id, most_recently_received_chunk_id) :
+
+        if current_chunk_id == most_recently_received_chunk_id + 2 :
+            return [current_chunk_id + 1]
+
+        else : return range(current_chunk_id + 1, most_recently_received_chunk_id)
+
+    # write the data at the given position in the file according to the
+    # sequence and chunk ids
+    def write_data_to_file(self, data_to_write, seq_id, chunk_id) :
+
+        offset = seq_id * FileTransmissionConfig.SEQUENCE_SIZE * FILE_DATA_PER_PACKET_AMOUNT + chunk_id 
+
+        os.lseek(self.file_to_write, offset , os.SEEK_SET)
+
+        return self.file_to_write.write(data_to_write)
 
 
     # set up the file descriptor for writing the file to

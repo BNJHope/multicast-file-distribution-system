@@ -69,7 +69,7 @@ class FileTransferServer(FileTransferAbstract):
                       [],
                       self.target_nodes,
                       [],
-                      0.1)
+                      0.001)
 
             print(len(ready_to_write))
 
