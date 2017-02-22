@@ -20,6 +20,13 @@ class PacketStructFormats :
 	# missing chunks contains a list of missing chunks or not
 	is_missing_chunks_format = "?"
 
+	# format of the checksum in the init packet
+	checksum_format = "8s"
+
+	# the format for the part of the acknowledgement message
+	# from a client at the end of a file transmission
+	received_successfully_format = "?"
+
 	# format for the file data packets - uses the transmission config's
 	# file data per packet to determine the pattern of it
 	file_data_format = str(FileTransmissionConfig.FILE_DATA_PER_PACKET_AMOUNT) + "s"
@@ -28,7 +35,7 @@ class PacketStructFormats :
 	general_header_format = "3sI"
 
 	# the format for the init apcket
-	init_packet_format = file_uuid_format + seq_id_format
+	init_packet_format = file_uuid_format + seq_id_format + checksum_format
 
 	# the format for the response packet
 	resp_packet_format = file_uuid_format
@@ -47,4 +54,4 @@ class PacketStructFormats :
 	end_transmission_packet_format = file_uuid_format
 
 	# format for the successful transmission packet
-	successful_transmission_packet_format = file_uuid_format
+	successful_transmission_packet_format = file_uuid_format + received_successfully_format

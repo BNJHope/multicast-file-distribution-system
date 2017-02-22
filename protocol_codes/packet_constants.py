@@ -13,8 +13,11 @@ class PacketKeyConstants :
 	# in the initial packet
 	INIT_NUM_OF_FILE_SEQUENCES_POS = 3
 
+	# location of checksum of file in packet
+	INIT_CHECKSUM_POS = 4
+
 	# location of filename in local tuple
-	INIT_FILENAME_POS = 4
+	INIT_FILENAME_POS = 5
 
 	# location of file uuid in resp
 	INIT_RESP_FILE_UUID_POS = 2
@@ -54,6 +57,17 @@ class PacketKeyConstants :
 
 	# list of missing chunks location
 	MISSING_CHUNKS_LIST_OF_MISSING_CHUNKS = 5
+
+	# position of the file uuid in the trasmission packet
+	END_OF_TRANSMISSION_UUID_POS = 2
+
+	# position of the uuid in the transmission success packet
+	SUCCESS_TRANSMISSION_UUID_POS = 2
+
+	# position of the boolean that determines if the
+	# client successfully received the file or not
+	# after comparing the checksums
+	SUCCESS_TRANSMISSION_WAS_SUCCESSFUL_POS = 3
 
 	#multiple data separator
 	DATA_SEPARATOR = ','

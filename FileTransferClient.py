@@ -4,6 +4,7 @@ import select
 import struct
 import os
 import sys
+import zlib
 
 from FileTransferAbstract import FileTransferAbstract
 from packetconstruction import PacketConstructor
@@ -82,12 +83,12 @@ class FileTransferClient(FileTransferAbstract):
                 connected = True
 
                 # start begin the interaction with the server
-                self.start_server_interation()
+                self.start_server_interaction()
 
 
     # begins the process of receiving
     # a file from the server
-    def start_server_interation(self) :
+    def start_server_interaction(self) :
 
         # get the connection and the address from accepting
         # the connection
@@ -106,15 +107,18 @@ class FileTransferClient(FileTransferAbstract):
         # get the number of sequences to be sent from the init packet
         num_of_seqs = init_packet[PacketKeyConstants.INIT_NUM_OF_FILE_SEQUENCES_POS]
 
+        # the checksum of the file
+        checksum = init_packet[PacketKeyConstants.INIT_CHECKSUM_POS].decode()
+
         # get the file name from the init packet
         file_name = init_packet[PacketKeyConstants.INIT_FILENAME_POS]
 
         # receive the rest of the file transmission and
         # write it to the given file
-        self.receive_file(session_uuid, file_name, num_of_seqs)
+        self.receive_file(session_uuid, file_name, num_of_seqs, checksum)
 
     # receive data from the udp connection and write it all to the file
-    def receive_file(self, file_uuid, file_name, num_of_seqs) :
+    def receive_file(self, file_uuid, file_name, num_of_seqs, checksum) :
         
         file_data_packet_size = struct.calcsize(self.packet_constructor.general_header_format + self.packet_constructor.file_data_packet_format) + FileTransmissionConfig.FILE_DATA_PER_PACKET_AMOUNT
 
@@ -128,11 +132,16 @@ class FileTransferClient(FileTransferAbstract):
 
         missed_packets = []
 
+        # form the filename of the file we will write to
+        filename_to_write = self.get_write_file_name(file_name.decode())
+
         # set up the udp stream ready to receive files
         self.setup_file_data_socket()
 
-        self.set_up_file_to_write(file_name.decode())
+        # set up the file that we will write to
+        self.set_up_file_to_write(filename_to_write)
 
+        # send the response to the initial message from the server
         self.send_init_response(file_uuid)
 
         # while we still have file data to receive
@@ -224,16 +233,35 @@ class FileTransferClient(FileTransferAbstract):
 
                             self.send_for_missed_packets(file_uuid, current_sequence_id, missed_packets)
 
+                            # increment the sequence id and reset the other
+                            # values ready for the next sequence transmission
                             current_sequence_id += 1
 
                             current_chunk_id = -1
 
                             missed_packets = []
-                            
+
                         # if its a control packet that states the end of the file transmission...
                         elif file_type == MessageCodeEnum.END_OF_FILE_TRANSMISSION :
 
                             print("end of transmission")
+
+                            # the checksum calculated from the received file
+                            result_checksum = self.get_checksum_of_file(filename_to_write)
+
+                            # if the result checksum and original transmitted
+                            # checksum match, then the transmission was successful
+                            if result_checksum == checksum :
+                                success_packet = self.packet_constructor.assemble_successful_transmission_packet(file_uuid, True)
+                                sent = self.server_connection.send(success_packet)
+                                print("CHECKSUM SUCCESS - FILE TRANSMITTED SUCCESSFULLY")
+
+                            else :
+                                success_packet = self.packet_constructor.assemble_successful_transmission_packet(file_uuid, False)
+                                sent = self.server_connection.send(success_packet)
+                                print("CHECKSUM FAILED - NEED TO TRANSMIT FILE AGAIN")
+
+                            transmission_complete = True
 
                         # if its anything else, handle the error
                         else :
@@ -246,10 +274,7 @@ class FileTransferClient(FileTransferAbstract):
 
         chunks_are_missing = True
 
-        print(missed_packets)
-
         if not missed_packets :
-            print("No packets missing")
             chunks_are_missing = False
 
         packet_to_send = self.packet_constructor.assemble_missing_chunks_packet(file_uuid, seq_id, chunks_are_missing, missed_packets)
@@ -322,7 +347,6 @@ class FileTransferClient(FileTransferAbstract):
                         # if the list of missed packets is now
                         # empty then set the exit condition to true
                         if not missed_packets :
-                            print("CHUNKS NO LONGER MISSING")
                             chunks_are_missing = False
 
                         packet_to_send = self.packet_constructor.assemble_missing_chunks_packet(file_uuid, seq_id, chunks_are_missing, missed_packets)
@@ -353,18 +377,8 @@ class FileTransferClient(FileTransferAbstract):
     # set up the file descriptor for writing the file to
     def set_up_file_to_write(self, filename) :
 
-        file_partitions = filename.rsplit('/', 1)
-
-        new_file_name_parts = file_partitions[1].split('.', 1)
-
-        new_file_name = new_file_name_parts[0] + ".received." + new_file_name_parts[1]
-
-        new_file_path = file_partitions[0] + "/" + new_file_name
-
-        print("FILE PATH : " + new_file_path)
-
         # creates a new file
-        file_to_receive = os.open(new_file_path, os.O_WRONLY|os.O_CREAT)
+        file_to_receive = os.open(filename, os.O_WRONLY|os.O_CREAT)
 
         # sets this client's file to write as
         # the file that we just created
@@ -421,3 +435,30 @@ class FileTransferClient(FileTransferAbstract):
         while True:
             data, addr = sock.recvfrom(1024)
             print(data)
+
+    # get the filename of the file to write to
+    def get_write_file_name(self, filename) :
+
+        # split the path name at the last path separator
+        file_partitions = filename.rsplit('/', 1)
+
+        # split the raw filename on the first . occurence
+        new_file_name_parts = file_partitions[1].split('.', 1)
+
+        # insert the ".received." where the first dot occured in the original filename
+        new_file_name = new_file_name_parts[0] + ".received." + new_file_name_parts[1]
+
+        # put all the components together to form the complete file name
+        new_file_path = file_partitions[0] + "/" + new_file_name
+
+        return new_file_path
+
+    # get the checksum of the file so that it can
+    # be sent to the client beforehand as a check
+    def get_checksum_of_file(self, filename) :
+        print("Calculating checksum...")
+        prev = 0
+        for eachLine in open(filename,"rb"):
+            prev = zlib.crc32(eachLine, prev)
+        print("Checksum calculated")
+        return "%X"%(prev & 0xFFFFFFFF)

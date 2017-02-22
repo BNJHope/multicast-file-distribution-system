@@ -9,9 +9,9 @@ from file_transmission_config import FileTransmissionConfig
 class PacketConstructor(PacketStructFormats) :
 
 	# assembles a packet to start initial file transmission
-	def assemble_file_init_packet(self, filename, file_uuid, num_seqs):
+	def assemble_file_init_packet(self, filename, file_uuid, num_seqs, checksum):
 
-		app_packet = struct.pack(self.init_packet_format, file_uuid, num_seqs) + filename.encode()
+		app_packet = struct.pack(self.init_packet_format, file_uuid, num_seqs, checksum.encode()) + filename.encode()
 
 		packet = self.assemble_generic_packet_parts(MessageCodeEnum.FILE_INIT, app_packet)
 
@@ -72,9 +72,9 @@ class PacketConstructor(PacketStructFormats) :
 
 	# assebmle a packet indicating that a client successfully received
 	# the file transmission
-	def assemble_successful_transmission_packet(self, file_uuid) :
+	def assemble_successful_transmission_packet(self, file_uuid, received_successfully) :
 
-		app_packet = struct.pack(self.successful_transmission_packet_format, str(file_uuid).encode())
+		app_packet = struct.pack(self.successful_transmission_packet_format, str(file_uuid).encode(), received_successfully)
 
 		packet = self.assemble_generic_packet_parts(MessageCodeEnum.SUCCESSFUL_TRANSMISSION, app_packet)
 

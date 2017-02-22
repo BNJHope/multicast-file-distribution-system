@@ -6,6 +6,7 @@ import math
 import struct
 import copy
 import time
+import zlib
 
 from FileTransferAbstract import FileTransferAbstract
 from packetconstruction import PacketConstructor
@@ -66,13 +67,16 @@ class FileTransferServer(FileTransferAbstract):
         # file id to pass for this file session
         file_id = str(uuid.uuid1())
 
+        # the checksum of the file that we want to send
+        checksum = self.get_checksum_of_file(filename)
+
         # send the init packet
-        self.send_init(filename, file_id, num_seqs)
+        self.send_init(filename, file_id, num_seqs, checksum)
 
         self.send_file(filename, file_id, num_seqs)
         
     # send a file to all available clients
-    def send_init(self, filename, file_uuid, num_seqs) :
+    def send_init(self, filename, file_uuid, num_seqs, checksum) :
 
         # stay connected until there is at least one receiver
         stay_connected = True
@@ -96,7 +100,7 @@ class FileTransferServer(FileTransferAbstract):
                 stay_connected = False
 
                 # assemble the file transmission init packet
-                packet_to_send = self.packet_constructor.assemble_file_init_packet(filename, file_uuid.encode(), num_seqs)
+                packet_to_send = self.packet_constructor.assemble_file_init_packet(filename, file_uuid.encode(), num_seqs, checksum)
                 sent = s.send(packet_to_send)
                 
                 # calculate the size in bytes of the response packet
@@ -205,12 +209,18 @@ class FileTransferServer(FileTransferAbstract):
                     # of missing packets
                     missing_packets_list.extend(int(x) for x in client_missing_packets)
 
-            # broadcast the missing chunks and then ask around again afterwards
-            # for missing packets until all clients have received the packets for
-            # this sequence
-            self.broadcast_chunks(missing_packets_list, seq_id, file_uuid, read_file)
-        
+            # if there are elements in the missing packets list then
+            # transmit them
+            if missing_packets_list :
+
+                # broadcast the missing chunks and then ask around again afterwards
+                # for missing packets until all clients have received the packets for
+                # this sequence
+                self.broadcast_chunks(missing_packets_list, seq_id, file_uuid, read_file)
+            
             time.sleep(0.001)
+
+            missing_packets_list = []
 
     # send end of sequence message to ask client
     # which packets they are missing if any
@@ -290,3 +300,38 @@ class FileTransferServer(FileTransferAbstract):
 
             # put the socket connection in the list
             self.target_nodes.append(new_sock)
+
+    # send the end of transmission packet to the clients
+    def send_end_transmission_packet(self, file_id) :
+
+        end_transmission_packet = self.packet_constructor.assemble_end_transmission_packet(file_id)
+
+        for s in self.target_nodes :
+
+            # send the end of transmission message and wait for a response from the client
+            sent_bytes = s.send(end_transmission_packet)
+            
+            # size of an end transmission packet
+            size_of_success_packet = struct.calcsize(self.packet_constructor.general_header_format + self.packet_constructor.successful_transmission_packet_format)
+            
+            # get the message to determine if the transmission was successful or not from the client
+            success_message = s.recv(size_of_success_packet)
+
+            refined_sucess_packet = self.packet_parser.translate_packet(success_message)
+
+            # if the client received the file successfully then let the user know
+            if refined_sucess_packet[PacketKeyConstants.SUCCESS_TRANSMISSION_WAS_SUCCESSFUL_POS] :
+                print("SUCCESSFUL TRANSMISSION TO : " + str(s.getpeername()))
+            else :
+                print("FAILED TRANSMISSION TO : " + str(s.getpeername()))
+
+
+    # get the checksum of the file so that it can
+    # be sent to the client beforehand as a check
+    def get_checksum_of_file(self, filename) :
+        print("Calculating checksum...")
+        prev = 0
+        for eachLine in open(filename,"rb"):
+            prev = zlib.crc32(eachLine, prev)
+        print("Checksum calculated")
+        return "%X"%(prev & 0xFFFFFFFF)
