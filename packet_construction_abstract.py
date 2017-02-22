@@ -38,13 +38,13 @@ class PacketStructFormats :
 
 	# the format for the packet that checks that clients have received
 	# all of the packets
-	seq_check_packet_format = file_uuid_format + seq_id_format
+	seq_check_packet_format = file_uuid_format + seq_id_format + chunk_id_format
 
 	# the format for packets that are responding to the call for 
 	missing_chunks_packet_format = file_uuid_format + seq_id_format + is_missing_chunks_format
 
 	# format for the end transmission packet
-	end_transmission_packet_format = file_uuid_format + seq_id_format + chunk_id_format
+	end_transmission_packet_format = file_uuid_format
 
 	# format for the successful transmission packet
 	successful_transmission_packet_format = file_uuid_format

@@ -1,6 +1,9 @@
 import socket
 import uuid
 import select 
+import struct
+import os
+import sys
 
 from FileTransferAbstract import FileTransferAbstract
 from packetconstruction import PacketConstructor
@@ -8,6 +11,7 @@ from packet_deconstructor import PacketDeconstructor
 from file_transmission_config import FileTransmissionConfig
 from protocol_codes.packet_constants import PacketKeyConstants
 from protocol_codes.message_code import MessageCodeEnum
+from protocol_codes.server_return_codes import ServerReturnCodes
 
 class FileTransferClient(FileTransferAbstract):
 
@@ -96,8 +100,6 @@ class FileTransferClient(FileTransferAbstract):
         # will be made in return
         init_packet = self.packet_parser.translate_packet(self.initialise_transmission(conn))
 
-        print(str(init_packet))
-
         # get the session uuid
         session_uuid = init_packet[PacketKeyConstants.INIT_FILE_UUID_POS]
 
@@ -112,9 +114,9 @@ class FileTransferClient(FileTransferAbstract):
         self.receive_file(session_uuid, file_name, num_of_seqs)
 
     # receive data from the udp connection and write it all to the file
-    def receive_file(self, uuid, file_name, num_of_seqs) :
+    def receive_file(self, file_uuid, file_name, num_of_seqs) :
         
-        file_data_packet_size = self.packet_constructor.general_header_format + self.packet_constructor.file_data_packet_format + FileTransmissionConfig.FILE_DATA_PER_PACKET_AMOUNT
+        file_data_packet_size = struct.calcsize(self.packet_constructor.general_header_format + self.packet_constructor.file_data_packet_format) + FileTransmissionConfig.FILE_DATA_PER_PACKET_AMOUNT
 
         transmission_complete = False
 
@@ -122,16 +124,16 @@ class FileTransferClient(FileTransferAbstract):
 
         current_sequence_id = 0
 
-        current_chunk_id = 0
+        current_chunk_id = -1
 
         missed_packets = []
 
         # set up the udp stream ready to receive files
         self.setup_file_data_socket()
 
-        self.set_up_file_to_write(file_name)
+        self.set_up_file_to_write(file_name.decode())
 
-        self.send_init_response()
+        self.send_init_response(file_uuid)
 
         # while we still have file data to receive
         while not transmission_complete :
@@ -155,85 +157,179 @@ class FileTransferClient(FileTransferAbstract):
                     # parse the data packet
                     refined_file_data_packet = self.packet_parser.translate_packet(raw_file_data_packet)
 
-                    # determine the type of packet that was received
-                    file_type = refined_file_data_packet[PacketKeyConstants.PACKET_TYPE_POS]
+                    if isinstance(refined_file_data_packet, ServerReturnCodes) :
+                    
+                        print("Lost connection with server")
+                        sys.exit(1)
+                    
+                    else :
 
-                    # if its a file data packet...
-                    if file_type ==  MessageCodeEnum.FILE_DATA : # self.handle_file_data_packet(refined_file_data_packet, current_sequence_id, current_chunk_id)
+                        # determine the type of packet that was received
+                        file_type = refined_file_data_packet[PacketKeyConstants.PACKET_TYPE_POS]
 
-                        receive_file_uuid = refined_file_data_packet[PacketKeyConstants.DATA_FILE_UUID_POS]
-                        
-                        received_file_seq_id = refined_file_data_packet[PacketKeyConstants.DATA_SEQUENCE_NUMBER_POS]
+                        # if its a file data packet...
+                        if file_type ==  MessageCodeEnum.FILE_DATA : # self.handle_file_data_packet(refined_file_data_packet, current_sequence_id, current_chunk_id)
 
-                        received_file_chunk_id = refined_file_data_packet[PacketKeyConstants.DATA_CHUNK_ID_POS]
+                            receive_file_uuid = refined_file_data_packet[PacketKeyConstants.DATA_FILE_UUID_POS]
+                            
+                            received_file_seq_id = refined_file_data_packet[PacketKeyConstants.DATA_SEQUENCE_NUMBER_POS]
 
-                        # if the session uuid's do not match then identify this problem
-                        if receive_file_uuid == uuid :
+                            received_file_chunk_id = refined_file_data_packet[PacketKeyConstants.DATA_CHUNK_ID_POS]
 
-                            # if sequence ids don't match then highlight the problem
-                            if received_file_seq_id == current_sequence_id :
+                            # print("RECEIVED DATA : " + str(received_file_seq_id) + str(received_file_chunk_id))
 
-                                # if chunk id's don't match then extend the missing packets list
-                                # but still write to the file
-                                if received_file_chunk_id != current_chunk_id  :
+                            # if the session uuid's do not match then identify this problem
+                            if receive_file_uuid == file_uuid :
 
-                                    missed_packets.extend(self.get_missed_packets(current_chunk_id, refined_file_data_packet[PacketKeyConstants.DATA_CHUNK_ID_POS]))
+                                # if sequence ids don't match then highlight the problem
+                                if received_file_seq_id == current_sequence_id :
 
-                                self.write_data_to_file()
+                                    # print("Received chunk : " + str(received_file_chunk_id))
 
-                            else : print("Missed segment : " + current_sequence_id)
+                                    # if chunk id's don't match then extend the missing packets list
+                                    # but still write to the file
+                                    if received_file_chunk_id != current_chunk_id + 1 :
 
-                        else : print("UUID incorrect")
+                                        print("missed packets between " + str(current_chunk_id) + " and " + str(received_file_chunk_id))
+                                        missed_packets.extend(self.get_missed_packets(current_chunk_id, refined_file_data_packet[PacketKeyConstants.DATA_CHUNK_ID_POS]))
 
-                    # if its a control packet for checking to see
-                    # if the client has received the whole sequence...
-                    elif file_type == MessageCodeEnum.SEQ_CHECK :
+                                    self.write_data_to_file(refined_file_data_packet[PacketKeyConstants.DATA_FILE_DATA_POS], received_file_seq_id, received_file_chunk_id)
 
+                                    current_chunk_id = received_file_chunk_id
 
+                                else :
+                                    if(current_sequence_id < received_file_seq_id) :
+                                        print("Missed sequence")
+                                        print("Original : " + str(current_sequence_id))
+                                        print("Received : " + str(received_file_seq_id))
+                            
+                            else : print("UUID incorrect")
 
-                    # if its a control packet that states the end of the file transmission...
-                    elif file_type == MessageCodeEnum.END_OF_FILE_TRANSMISSION :
+                        # if its a control packet for checking to see
+                        # if the client has received the whole sequence...
+                        elif file_type == MessageCodeEnum.SEQ_CHECK :
 
-                    # if its anything else, handle the error
-                    else : print("UNEXPECTED MESSAGE TYPE")
+                            # get the sequence that we want to check for
+                            sequence_to_check = refined_file_data_packet[PacketKeyConstants.SEQ_CHECK_SEQ_ID_POS]
+
+                            # the id of the last chunk that was sent in
+                            # this sequence
+                            last_chunk_id = refined_file_data_packet[PacketKeyConstants.SEQ_CHECK_LAST_CHUNK_ID_POS]
+
+                            # if there were packets at the end that were missed,
+                            # add those missed packets to the missed packets list
+                            if last_chunk_id > current_chunk_id :
+
+                                missed_packets.extend(range(current_chunk_id, last_chunk_id + 1))
+
+                            self.send_for_missed_packets(file_uuid, current_sequence_id, missed_packets)
+
+                            current_sequence_id += 1
+
+                            current_chunk_id = -1
+
+                            missed_packets = []
+                            
+                        # if its a control packet that states the end of the file transmission...
+                        elif file_type == MessageCodeEnum.END_OF_FILE_TRANSMISSION :
+
+                            print("end of transmission")
+
+                        # if its anything else, handle the error
+                        else :
+                            print("UNEXPECTED MESSAGE TYPE")
 
     # handles getting the missed packets from the server
     def send_for_missed_packets(self, file_uuid, seq_id, missed_packets) :
 
-        # boolean to determine if the loop can be exited or not
-        can_exit = False
+        file_data_packet_size = struct.calcsize(self.packet_constructor.general_header_format + self.packet_constructor.file_data_packet_format) + FileTransmissionConfig.FILE_DATA_PER_PACKET_AMOUNT
 
-        while not can_exit :
+        chunks_are_missing = True
 
-                ready_to_read, ready_to_write, _ = \
-                select.select(
-                    [self.server_connection],
-                    [],
-                    [],
-                    0.0001)
+        print(missed_packets)
 
-                for s in ready_to_read :
+        if not missed_packets :
+            print("No packets missing")
+            chunks_are_missing = False
 
+        packet_to_send = self.packet_constructor.assemble_missing_chunks_packet(file_uuid, seq_id, chunks_are_missing, missed_packets)
 
-            # if the list of missed packets is empty
-            if not missed_packets :
+        sent = self.server_connection.send(packet_to_send)
 
-                can_exit = True
+        while chunks_are_missing :
 
-                seq_success_packet = self.packet_constructor.assemble_missing_chunks_packet(file_uuid, seq_id, False, [])
+            ready_to_read, ready_to_write, _ = \
+            select.select(
+                [self.server_connection, self.file_data_sock],
+                [],
+                [],
+                0.0001)
 
-                self.server_connection.send(seq_success_packet)
+            for s in ready_to_read :
 
-            # if there are still packets missing
-            else :
+                # receive data packet from the socket
+                raw_file_data_packet = s.recv(file_data_packet_size)
 
-                missed_chunks_packet = self.packet_constructor.assemble_missing_chunks_packet(file_uuid, seq_id, True, missed_packets)
+                # parse the data packet
+                refined_file_data_packet = self.packet_parser.translate_packet(raw_file_data_packet)
 
-                self.server_connection.send(seq_success_packet)
+                # if its a server error code
+                # then output the error code
+                if isinstance(refined_file_data_packet, ServerReturnCodes) :
+                    return
+
+                else :
+
+                    # determine the type of packet that was received
+                    file_type = refined_file_data_packet[PacketKeyConstants.PACKET_TYPE_POS]
+
+                    # if its a file data packet...
+                    if file_type ==  MessageCodeEnum.FILE_DATA :
+
+                            receive_file_uuid = refined_file_data_packet[PacketKeyConstants.DATA_FILE_UUID_POS]
+                            
+                            received_file_seq_id = refined_file_data_packet[PacketKeyConstants.DATA_SEQUENCE_NUMBER_POS]
+
+                            received_file_chunk_id = refined_file_data_packet[PacketKeyConstants.DATA_CHUNK_ID_POS]
+
+                            # print("RECEIVED DATA : " + str(received_file_seq_id) + str(received_file_chunk_id))
+
+                            # if the session uuid's do not match then identify this problem
+                            if receive_file_uuid == file_uuid :
+
+                                # if sequence ids don't match then highlight the problem
+                                if received_file_seq_id == seq_id :
+
+                                    #print("Received chunk : " + str(received_file_chunk_id))
+
+                                    # if the packet we received is in the missed packets list
+                                    # then write the packet to the file and remove it from the list
+                                    # of missing packets
+                                    if received_file_chunk_id in missed_packets :
+
+                                        self.write_data_to_file(refined_file_data_packet[PacketKeyConstants.DATA_FILE_DATA_POS], received_file_seq_id, received_file_chunk_id)
+
+                                        missed_packets.remove(received_file_chunk_id)
+
+                                else : print("Missed segment : " + current_sequence_id)
+
+                            else :
+                                print("UUID incorrect")
+
+                    # if its a control sequence packet
+                    elif file_type == MessageCodeEnum.SEQ_CHECK :
+
+                        # if the list of missed packets is now
+                        # empty then set the exit condition to true
+                        if not missed_packets :
+                            print("CHUNKS NO LONGER MISSING")
+                            chunks_are_missing = False
+
+                        packet_to_send = self.packet_constructor.assemble_missing_chunks_packet(file_uuid, seq_id, chunks_are_missing, missed_packets)
+
+                        sent = self.server_connection.send(packet_to_send)
 
         return
-
-    # def handle_file_data_packet(self, refined_file_data_packet, seq_id, chunk_id) :
 
     # get a list of the packets that have been missed depending on the last
     # received chunk and the most recently received chunk
@@ -248,18 +344,27 @@ class FileTransferClient(FileTransferAbstract):
     # sequence and chunk ids
     def write_data_to_file(self, data_to_write, seq_id, chunk_id) :
 
-        offset = seq_id * FileTransmissionConfig.SEQUENCE_SIZE * FILE_DATA_PER_PACKET_AMOUNT + chunk_id 
+        offset = seq_id * FileTransmissionConfig.SEQUENCE_SIZE * FileTransmissionConfig.FILE_DATA_PER_PACKET_AMOUNT + (chunk_id * FileTransmissionConfig.FILE_DATA_PER_PACKET_AMOUNT) 
 
-        os.lseek(self.file_to_write, offset , os.SEEK_SET)
+        os.lseek(int(self.file_to_write), offset , os.SEEK_SET)
 
-        return self.file_to_write.write(data_to_write)
-
+        return os.write(self.file_to_write, data_to_write)
 
     # set up the file descriptor for writing the file to
     def set_up_file_to_write(self, filename) :
 
+        file_partitions = filename.rsplit('/', 1)
+
+        new_file_name_parts = file_partitions[1].split('.', 1)
+
+        new_file_name = new_file_name_parts[0] + ".received." + new_file_name_parts[1]
+
+        new_file_path = file_partitions[0] + "/" + new_file_name
+
+        print("FILE PATH : " + new_file_path)
+
         # creates a new file
-        file_to_receive = open("received." + filename, 'a+')
+        file_to_receive = os.open(new_file_path, os.O_WRONLY|os.O_CREAT)
 
         # sets this client's file to write as
         # the file that we just created
@@ -308,7 +413,6 @@ class FileTransferClient(FileTransferAbstract):
         intf = socket.gethostbyname(socket.gethostname())
         self.file_data_sock.setsockopt(socket.SOL_IP, socket.IP_MULTICAST_IF, socket.inet_aton(intf))
         self.file_data_sock.setsockopt(socket.SOL_IP, socket.IP_ADD_MEMBERSHIP, socket.inet_aton(self.MCAST_ADDRESS) + socket.inet_aton(intf))
-
         
 
     # Listens on the port and multicast address for data

@@ -39,18 +39,21 @@ class PacketKeyConstants :
 	# the sequence check packet
 	SEQ_CHECK_SEQ_ID_POS = 3
 
+	# id of the last chunk that was sent
+	SEQ_CHECK_LAST_CHUNK_ID_POS = 4
+
 	# position of file id in missing chunk packet
 	MISSING_CHUNKS_ID_POS = 2
 
 	# position of seq id in missing chunks packet
 	MISSING_CHUNKS_SEQ_ID_POS = 3
 
-	# list of missing chunks location
-	MISSING_CHUNKS_LIST_OF_MISSING_CHUNKS = 4
-
 	# position of the boolean determining if there are
 	# chunks missing or not in the packet
 	MISSING_CHUNKS_IS_MISSING_CHUNKS_POS = 4
+
+	# list of missing chunks location
+	MISSING_CHUNKS_LIST_OF_MISSING_CHUNKS = 5
 
 	#multiple data separator
 	DATA_SEPARATOR = ','
