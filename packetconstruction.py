@@ -30,6 +30,9 @@ class PacketConstructor(PacketStructFormats) :
 	# and also where in the sequence it lies
 	def assemble_file_data_packet(self, file_uuid, seq_id, chunk_id, file_data) :
 
+		if chunk_id == -1 :
+			chunk_id = 0
+			
 		app_packet = struct.pack(self.file_data_packet_format, str(file_uuid).encode(), seq_id, chunk_id) + file_data
 
 		packet = self.assemble_generic_packet_parts(MessageCodeEnum.FILE_DATA, app_packet)

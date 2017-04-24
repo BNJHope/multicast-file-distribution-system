@@ -15,6 +15,7 @@ from packet_deconstructor import PacketDeconstructor
 from protocol_codes.packet_constants import PacketKeyConstants
 from protocol_codes.message_code import MessageCodeEnum
 from protocol_codes.server_return_codes import ServerReturnCodes
+from timeout import timeout
 
 class FileTransferServer(FileTransferAbstract):
 
@@ -55,10 +56,13 @@ class FileTransferServer(FileTransferAbstract):
         self.filestream_udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.filestream_udp_sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 20)
 
-    def start_send_file(self, filename) :
+    def start_send_file(self, filename, number_of_clients = -1) :
 
         # set up control sockets with the clients
         self.set_up_client_control_sockets()
+
+        if(number_of_clients != -1) :
+            self.target_nodes = self.target_nodes[:number_of_clients]
 
         # get the number of sequences that will be used in the file transmission
         # to split the file up
@@ -105,13 +109,15 @@ class FileTransferServer(FileTransferAbstract):
                 
                 # calculate the size in bytes of the response packet
                 size_of_resp_packet = struct.calcsize(self.packet_constructor.general_header_format + self.packet_constructor.resp_packet_format)
-                received_packet = s.recv(size_of_resp_packet)
+                
+                try :
+                    with timeout(seconds=5) :
+                        received_packet = s.recv(size_of_resp_packet)
 
-                refined_received_packet = self.packet_parser.translate_packet(received_packet)
-
-                # if the uuids do not match
-                if refined_received_packet[PacketKeyConstants.INIT_RESP_FILE_UUID_POS].decode() != file_uuid :
-                    print("UUIDS DO NOT MATCH IN RESP PACKET")
+                except TimeoutError :
+                    print("Too long response from " + str(s.getpeername()) + " - dropping connection with them.")
+                    self.target_nodes.remove(s)
+                    continue
 
         return
 
@@ -142,6 +148,8 @@ class FileTransferServer(FileTransferAbstract):
         # for every sequence of packets
         for seq_num in range(num_seqs):
             
+            print("Transmitting sequence : " + str(seq_num) + " / " + str(num_seqs)) 
+
             #broadcast the inital chunks of this sequence
             num_of_chunks_sent = self.broadcast_sequence_chunks(seq_num, file_id, read_file)
 
@@ -150,6 +158,7 @@ class FileTransferServer(FileTransferAbstract):
 
             # handle any chunks of this sequence that need to be sent again
             self.handle_repeat_packets(file_id, seq_num, read_file, num_of_chunks_sent)
+
 
         # send the end transmission packet
         self.send_end_transmission_packet(file_id)
@@ -234,7 +243,15 @@ class FileTransferServer(FileTransferAbstract):
 
         size_of_missing_chunks_packet = struct.calcsize(self.packet_constructor.general_header_format + self.packet_constructor.missing_chunks_packet_format) + 2048
         
-        received_packet = client.recv(size_of_missing_chunks_packet)
+        try :
+            with timeout(seconds=1) :
+                received_packet = client.recv(size_of_missing_chunks_packet)
+
+        except TimeoutError :
+            print("Too long response from " + str(client.getpeername()) + " - dropping connection with them.")
+            self.target_nodes.remove(client)
+            client.close()
+            return []
 
         refined_received_packet = self.packet_parser.translate_packet(received_packet)
 
@@ -295,11 +312,17 @@ class FileTransferServer(FileTransferAbstract):
             # make a new socket with the addresses
             new_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-            # connect the socket
-            new_sock.connect((node_addr, self.CONTROL_PORT))
+            # try to connect to the socket
+            try :
+                # connect the socket
+                new_sock.connect((node_addr, self.CONTROL_PORT))
 
-            # put the socket connection in the list
-            self.target_nodes.append(new_sock)
+                # put the socket connection in the list
+                self.target_nodes.append(new_sock)
+
+                print("Connected to : " + str(node_addr))
+            except socket.error :
+                print("Unable to connect to : " + str(node_addr))
 
     # send the end of transmission packet to the clients
     def send_end_transmission_packet(self, file_id) :
@@ -314,8 +337,18 @@ class FileTransferServer(FileTransferAbstract):
             # size of an end transmission packet
             size_of_success_packet = struct.calcsize(self.packet_constructor.general_header_format + self.packet_constructor.successful_transmission_packet_format)
             
-            # get the message to determine if the transmission was successful or not from the client
-            success_message = s.recv(size_of_success_packet)
+            try :
+                with timeout(seconds=100) :
+                    # get the message to determine if the transmission was successful or not from the client
+                    success_message = s.recv(size_of_success_packet)
+
+            except TimeoutError :
+                print("Too long response from " + str(s.getpeername()) + " - dropping connection with them.")
+                self.target_nodes.remove(s)
+                return
+
+
+            
 
             refined_sucess_packet = self.packet_parser.translate_packet(success_message)
 
@@ -324,7 +357,6 @@ class FileTransferServer(FileTransferAbstract):
                 print("SUCCESSFUL TRANSMISSION TO : " + str(s.getpeername()))
             else :
                 print("FAILED TRANSMISSION TO : " + str(s.getpeername()))
-
 
     # get the checksum of the file so that it can
     # be sent to the client beforehand as a check
